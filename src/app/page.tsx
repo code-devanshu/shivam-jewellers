@@ -40,7 +40,7 @@ export default async function Home() {
             <p className="text-2xl text-white mb-12">
               Our online store is coming soon
             </p>
-            <CountdownTimer targetDate="2024-12-23T23:59:59Z" />
+            <CountdownTimer targetDate="2025-01-20T23:59:59Z" />
             <p className="text-white mt-12 text-lg">
               Get ready for a dazzling collection of fine jewelry
             </p>

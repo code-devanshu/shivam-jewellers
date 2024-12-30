@@ -23,7 +23,7 @@ export default async function ProductsSection({
       {/* Product Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-2">
         <TooltipProvider>
-          {products.map((product) => (
+          {products.slice(0, 6).map((product) => (
             <JewelryProductCard
               key={product.id}
               id={product.id}

@@ -50,7 +50,13 @@ export default function JewelryProductCard({
 
   return (
     <Card className="w-full max-w-md mx-auto overflow-hidden bg-white shadow-lg transition-transform transform hover:shadow-xl rounded-lg">
-      <Link href={`/products/${id}`}>
+      <Link
+        href={`/products/${name
+          .trim()
+          .split(" ")
+          .join("-")
+          .toLowerCase()}?id=${id}`}
+      >
         <CardHeader className="p-0">
           <div className="relative overflow-hidden cursor-pointer h-60 w-full">
             <Image
@@ -65,7 +71,7 @@ export default function JewelryProductCard({
       </Link>
       <CardContent className="p-4">
         <div className="flex justify-between items-center mb-2">
-          <CardTitle className="text-2xl font-bold text-gray-800">
+          <CardTitle className="text-2xl font-bold text-gray-800 line-clamp-1">
             {name}
           </CardTitle>
           {rating && (

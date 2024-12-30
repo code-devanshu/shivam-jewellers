@@ -76,9 +76,7 @@ export default function ProductForm({
       });
       await revalidateResponse.json();
 
-      console.log("Product added successfully");
       router.push("/admin/dashboard/products");
-      console.log("Refreshing router");
       router.refresh();
     } finally {
       setIsSubmitting(false);
