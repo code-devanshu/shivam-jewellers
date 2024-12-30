@@ -5,13 +5,15 @@ import { RingIcon, NecklaceIcon } from "@/components/JewelryIcon";
 import { Gem } from "lucide-react";
 import ProductsSection from "./components/ProductsSection";
 
+export const revalidate = 60; // Revalidate every 60 seconds
+
 export default async function Home() {
   try {
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_BASE_URL}/api/products`,
       {
         method: "GET",
-        cache: "no-store", // Ensure fresh data is fetched every time
+        next: { revalidate: 60 }, // Ensure fresh data is fetched every time
       }
     );
 

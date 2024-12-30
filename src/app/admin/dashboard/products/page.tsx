@@ -1,6 +1,3 @@
-"use client";
-import { useState, useEffect } from "react";
-import AddProductForm from "./components/add-product-form";
 import Image from "next/image";
 import {
   Table,
@@ -11,53 +8,28 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { IndianRupee } from "lucide-react";
-import { Product } from "@/model/base.model";
 import ProductsClient from "./components/products-client";
+import Link from "next/link";
+import { Product } from "@/model/base.model";
 
-export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [cloudinaryImages, setCloudinaryImages] = useState([]);
-
-  // Function to fetch products
-  const fetchProducts = async (): Promise<void> => {
-    const res = await fetch("/api/products");
-    if (!res.ok) {
-      console.error("Failed to fetch products");
-      return;
-    }
-    const data: Product[] = await res.json();
-    setProducts(data);
-  };
-
-  // Fetch products initially
-  useEffect(() => {
-    fetchProducts();
-    fetchCloudinaryImages();
-  }, []);
-
-  const fetchCloudinaryImages = async () => {
-    try {
-      const response = await fetch("/api/cloudinary-images");
-      const data = await response.json();
-
-      setCloudinaryImages(data); // Set the images fetched from Cloudinary
-    } catch (error) {
-      console.error("Error fetching Cloudinary images:", error);
-    }
-  };
-
-  // Callback function to refresh products from child components
-  const handleRefresh = (): void => {
-    fetchProducts();
-  };
+export default async function ProductsPage() {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/products`);
+  if (!res.ok) {
+    console.error("Failed to fetch products");
+    return;
+  }
+  const products: Product[] = await res.json();
 
   return (
     <div className="p-6">
       <div className="flex justify-end items-center mb-6">
-        <AddProductForm
-          onRefresh={handleRefresh}
-          cloudinaryImages={cloudinaryImages}
-        />
+        <Link
+          href="/admin/dashboard/products/add"
+          replace={true}
+          className="ml-auto px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition"
+        >
+          Add Product
+        </Link>
       </div>
 
       {/* Render Table */}
@@ -79,16 +51,13 @@ export default function ProductsPage() {
                 Subcategory
               </TableHead>
               <TableHead className="py-3 px-4 font-semibold">Gender</TableHead>
-              <TableHead className="py-3 px-4 font-semibold">
-                Description
-              </TableHead>
               <TableHead className="py-3 px-4 font-semibold">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {products.map((product, index) => (
               <TableRow
-                key={product.id}
+                key={product.id + index + "fnkjndkn"}
                 className={`${
                   index % 2 === 0 ? "bg-white" : "bg-gray-50"
                 } hover:bg-gray-100 transition duration-200`}
@@ -96,7 +65,7 @@ export default function ProductsPage() {
                 <TableCell className="py-3 px-4">
                   <div className="flex justify-center items-center">
                     <Image
-                      src={product.image}
+                      src={product.image[0]}
                       height={50}
                       width={50}
                       className="rounded-full h-10 w-10 object-cover"
@@ -126,15 +95,8 @@ export default function ProductsPage() {
                 <TableCell className="py-3 px-4 text-gray-700">
                   {product.gender}
                 </TableCell>
-                <TableCell className="py-3 px-4 text-sm text-gray-600 max-w-xs truncate">
-                  {product.description}
-                </TableCell>
                 <TableCell className="py-3 px-4">
-                  <ProductsClient
-                    product={product}
-                    onRefresh={handleRefresh}
-                    cloudinaryImages={cloudinaryImages}
-                  />
+                  <ProductsClient product={product} />
                 </TableCell>
               </TableRow>
             ))}

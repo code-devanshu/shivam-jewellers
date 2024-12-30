@@ -25,7 +25,7 @@ export default async function Layout({
       <AppSidebar />
       <SidebarInset>
         <Header user={session.user} />
-        <div className="flex flex-1 flex-col gap-4 px-4 py-2">{children}</div>
+        <div className="px-4 py-2">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );

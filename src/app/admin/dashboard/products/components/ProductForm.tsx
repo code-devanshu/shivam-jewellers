@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useForm, FieldValues } from "react-hook-form";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,43 +12,159 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CldUploadButton } from "next-cloudinary"; // Import Cloudinary button
+import { DialogHeader } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 interface ProductFormProps {
-  onSubmit: (data: FieldValues) => Promise<void>;
   defaultValues?: FieldValues;
-  cloudinaryImages: { url: string; id: string }[]; // Images from Cloudinary
+  cloudinaryImages?: string[];
+  productId?: string;
 }
 
 export default function ProductForm({
-  onSubmit,
   defaultValues = {},
-  cloudinaryImages,
+  cloudinaryImages = [],
+  productId = "",
 }: ProductFormProps) {
   const { register, handleSubmit, setValue, watch } = useForm<FieldValues>({
     defaultValues,
   });
+  const router = useRouter();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
-  const [useCloudinary, setUseCloudinary] = useState(true); // Toggle between Cloudinary or upload
 
   // Watch fields for controlled inputs
   const gender = watch("gender", defaultValues.gender || "");
   const category = watch("category", defaultValues.category || "");
   const subcategory = watch("subcategory", defaultValues.subcategory || "");
+  const [imageUrls, setImageUrls] = useState<string[]>(
+    defaultValues.image || []
+  ); // To store image URLs
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const handleSelectImage = (imageUrl: string) => {
+    setImageUrls((prev) => {
+      // If the image is already selected, remove it from the array
+      if (prev.includes(imageUrl)) {
+        return prev.filter((url) => url !== imageUrl);
+      }
+      // Otherwise, add the image to the array
+      return [...prev, imageUrl];
+    });
+  };
 
   const handleFormSubmit = async (data: FieldValues) => {
     setIsSubmitting(true);
     try {
-      await onSubmit(data);
+      if (productId) {
+        await handleEditProduct(data);
+      } else {
+        await handleAddProduct(data);
+      }
+
+      const revalidateResponse = await fetch("/api/revalidate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          paths: ["/admin/dashboard/products", "/"], // Revalidate the parent route (e.g., the homepage or a parent page)
+        }),
+      });
+      await revalidateResponse.json();
+
+      console.log("Product added successfully");
+      router.push("/admin/dashboard/products");
+      console.log("Refreshing router");
+      router.refresh();
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleAddProduct = async (data: FieldValues) => {
+    try {
+      // Create FormData for the API
+      const formData = new FormData();
+
+      formData.append("name", data.name);
+      formData.append("price", data.price);
+      formData.append("description", data.description);
+      formData.append("material", data.material || "");
+      formData.append("category", data.category);
+      formData.append("subcategory", data.subcategory);
+      formData.append("gender", data.gender);
+      formData.append("images", JSON.stringify(imageUrls)); // Add image URLs array
+
+      const response = await fetch("/api/products", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Failed to add product");
+
+      await response.json();
+    } catch (error) {
+      console.error("Error:", error);
+      alert(
+        error instanceof Error ? error.message : "An unknown error occurred"
+      );
+    }
+  };
+
+  const handleEditProduct = async (data: FieldValues) => {
+    try {
+      const formData = new FormData();
+      formData.append("id", productId);
+      formData.append("name", data.name);
+      formData.append("price", data.price);
+      formData.append("description", data.description);
+      formData.append("material", data.material || "");
+      formData.append("category", data.category || "");
+      formData.append("subcategory", data.subcategory || "");
+      formData.append("gender", data.gender || "");
+      formData.append("images", JSON.stringify(imageUrls)); // Add image URLs array
+
+      const response = await fetch(`/api/products`, {
+        method: "PUT",
+        body: formData,
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to update product");
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      console.error("Error updating product:", error);
+      alert(error.message || "Failed to update product");
+    }
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleUploadSuccess = (result: any) => {
+    // Capture the uploaded image URL from Cloudinary
+    const imageUrl = result?.info?.secure_url;
+
+    if (imageUrl) {
+      // Update the images array with the new image URL
+      setImageUrls((prev) => {
+        const updatedImageUrls = [...prev, imageUrl];
+
+        setValue("images", updatedImageUrls); // Update react-hook-form field
+        return updatedImageUrls;
+      });
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+    <form
+      onSubmit={handleSubmit(handleFormSubmit)}
+      className="space-y-4 max-w-5xl mx-auto"
+    >
       {/* Product Name */}
       <Input
         {...register("name", { required: "Product name is required" })}
@@ -192,12 +307,6 @@ export default function ProductForm({
             Jhumka
           </SelectItem>
           <SelectItem
-            value="Jhumka"
-            className="py-2 px-4 hover:bg-yellow-100 text-gray-800"
-          >
-            Jhumka
-          </SelectItem>
-          <SelectItem
             value="Bichiya(Toe Ring)"
             className="py-2 px-4 hover:bg-yellow-100 text-gray-800"
           >
@@ -254,72 +363,83 @@ export default function ProductForm({
         </SelectContent>
       </Select>
 
-      {/* Toggle Between Upload or Select from Cloudinary */}
-      <div className="flex justify-between items-center">
-        <label className="text-sm font-medium text-gray-700 ms-0.5">
-          Upload from Existing
-        </label>
-        <input
-          type="checkbox"
-          checked={useCloudinary}
-          onChange={() => setUseCloudinary((prev) => !prev)}
-          className="h-4 w-4 text-yellow-600 focus:ring-yellow-400 border-gray-300 rounded"
-        />
+      <div className="flex items-center">
+        <p className="me-3 tex-sm">Product Images: </p>
+        {/* Cloudinary Image Upload Button */}
+        <CldUploadButton
+          uploadPreset="Shivam-jewellers-preset" // Use your Cloudinary preset
+          onSuccess={handleUploadSuccess} // Handle the success and update the form
+          className="w-32 p-1.5 bg-yellow-600 text-white rounded-lg"
+        >
+          Upload Images
+        </CldUploadButton>
+        <p className="mx-4">OR</p>
+        {/* Button to Open Dialog */}
+        <Button
+          type="button"
+          variant="primary"
+          onClick={() => setIsDialogOpen(true)} // Open the dialog
+          className="w-52 bg-blue-600 text-white"
+        >
+          Select Existing Images
+        </Button>
       </div>
-
-      {/* Conditionally Render Image Input or Cloudinary Selector */}
-      {useCloudinary ? (
-        <div>
-          <Input
-            type="text"
-            readOnly
-            {...register("image")}
-            placeholder="Select image link"
-            className="border border-gray-300 p-3 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 hover:bg-yellow-50 transition duration-200"
-          />
-          <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="mt-2">Select from Cloud</Button>
-            </DialogTrigger>
-            <DialogContent className="bg-white px-6 py-4 rounded-lg shadow-lg">
-              <h3 className="text-lg font-semibold mb-4">Select an Image</h3>
-              <div className="grid grid-cols-3 gap-4">
-                {cloudinaryImages.map((img) => (
-                  <div
-                    key={img.id}
-                    className="border rounded-lg overflow-hidden cursor-pointer hover:shadow-md transition"
-                    onClick={() => {
-                      setValue("image", img.url);
-                      setIsImageDialogOpen(false);
-                    }}
-                  >
-                    <Image
-                      src={img.url}
-                      alt={img.id}
-                      width={100}
-                      height={100}
-                      className="object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-            </DialogContent>
-          </Dialog>
+      {imageUrls.length > 0 && (
+        <div className="flex items-center space-x-2">
+          <p className="me-3">Selected Images:</p>
+          {imageUrls.map((imageUrl, index) => (
+            <Image
+              src={imageUrl}
+              key={index}
+              width="200"
+              height="200"
+              alt={`Image ${index + 1}`}
+              className=" h-24 w-24 rounded-full object-cover"
+            />
+          ))}
         </div>
-      ) : (
-        <Input
-          type="file"
-          accept="image/*"
-          {...register("image", { required: "Product image is required" })}
-          className="border border-gray-300 p-3 pt-1.5 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 hover:bg-yellow-50 transition duration-200"
-        />
       )}
+      {/* Dialog for Selecting Images */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="bg-white px-10 py-6 rounded-lg shadow-lg">
+          <DialogHeader>
+            <DialogTitle>
+              <p className="text-center text-2xl font-semibold mb-6">
+                Select Images
+              </p>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-3 gap-4">
+            {cloudinaryImages.map((imageUrl, index) => (
+              <div
+                key={index}
+                className="relative cursor-pointer"
+                onClick={() => handleSelectImage(imageUrl)} // Select image
+              >
+                <Image
+                  src={imageUrl}
+                  width="200"
+                  height="200"
+                  alt={`Image ${index + 1}`}
+                  className="w-full h-24 object-cover"
+                />
+                <input
+                  type="checkbox"
+                  checked={imageUrls.includes(imageUrl)}
+                  onChange={() => handleSelectImage(imageUrl)}
+                  className="absolute top-2 right-2"
+                />
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Submit Button */}
       <Button
         type="submit"
         variant="primary"
-        className="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
+        className="w-32 block bg-green-600 hover:bg-green-700 text-white"
         disabled={isSubmitting}
       >
         {isSubmitting ? "Submitting..." : "Submit"}

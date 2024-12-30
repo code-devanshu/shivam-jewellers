@@ -28,7 +28,7 @@ export default async function ProductsSection({
               key={product.id}
               id={product.id}
               name={product.name}
-              image={product.image}
+              image={product.image[0]}
               description={product.description}
               material={product.material}
               category={product.category}

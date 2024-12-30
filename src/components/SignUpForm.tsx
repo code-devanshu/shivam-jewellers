@@ -122,7 +122,7 @@ const SignUpForm: React.FC = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    (<form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* <Suspense fallback={<div>Loading...</div>}>
         <GoogleSSO />
       </Suspense> */}
@@ -297,7 +297,7 @@ const SignUpForm: React.FC = () => {
       >
         {loading ? "Sending OTP..." : "Create Account"}
       </Button>
-    </form>
+    </form>)
   );
 };
 

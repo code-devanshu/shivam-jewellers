@@ -31,8 +31,8 @@ export default function Gallery() {
             <Image
               src={image.src}
               alt={image.alt}
-              layout="fill"
-              objectFit="cover"
+              width={800}
+              height={800}
               className="transition-opacity duration-300 ease-in-out hover:opacity-80"
             />
           </div>

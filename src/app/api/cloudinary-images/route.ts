@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import cloudinary from "cloudinary";
 
 // Configure Cloudinary
@@ -8,11 +8,17 @@ cloudinary.v2.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+export async function GET(req: NextRequest) {
   try {
-    // Fetch resources from Cloudinary
-    const { resources } = await cloudinary.v2.api.resources({
+    // Use req.nextUrl to handle the URL properly
+    const cursor = req.nextUrl.searchParams.get("cursor") || undefined;
+
+    // Fetch resources from Cloudinary with pagination
+    const { resources, next_cursor } = await cloudinary.v2.api.resources({
       type: "upload",
+      max_results: 100, // Maximum results per request
+      next_cursor: cursor, // Cursor for fetching the next page
     });
 
     if (!resources || resources.length === 0) {
@@ -22,12 +28,9 @@ export async function GET() {
 
     // Map the resources to a simpler structure
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const images = resources.map((resource: any) => ({
-      url: resource.secure_url,
-      id: resource.public_id,
-    }));
+    const images = resources.map((resource: any) => resource.secure_url);
 
-    return NextResponse.json(images);
+    return NextResponse.json({ images, next_cursor }); // Include the next cursor for pagination
   } catch (error) {
     console.error("Error fetching images from Cloudinary:", error);
     return NextResponse.json(

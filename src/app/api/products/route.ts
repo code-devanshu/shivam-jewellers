@@ -21,8 +21,7 @@ export async function POST(req: NextRequest) {
     const name = formData.get("name") as string;
     const price = parseFloat(formData.get("price") as string);
     const description = formData.get("description") as string;
-    const imageInput = formData.get("image"); // Can be a URL or File
-    const imageType = formData.get("imageType") as string; // Added type field
+    const imageInput = formData.get("images") as string; // Can be a URL or File
     const material = formData.get("material") as string;
     const rating = formData.has("rating")
       ? parseInt(formData.get("rating") as string, 10)
@@ -38,49 +37,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let imageUrl: string;
-
-    if (imageType === "url") {
-      // If it's a URL, use it directly
-      imageUrl = imageInput as string;
-    } else if (imageType === "file") {
-      // If it's a File, upload it to Cloudinary
-      const file = formData.get("image") as File;
-      if (!(file instanceof File)) {
-        return NextResponse.json(
-          { error: "Invalid file input" },
-          { status: 400 }
-        );
-      }
-
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-
-      const uploadResult = await new Promise((resolve, reject) => {
-        cloudinary.v2.uploader
-          .upload_stream({ resource_type: "auto" }, (error, result) => {
-            if (error) reject(error);
-            resolve(result);
-          })
-          .end(buffer);
-      });
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      imageUrl = (uploadResult as any).secure_url;
-    } else {
-      return NextResponse.json(
-        { error: "Invalid image type" },
-        { status: 400 }
-      );
-    }
-
     // Create the product in the database
     const product = await prisma.product.create({
       data: {
         name,
         price,
         description,
-        image: imageUrl,
+        image: JSON.parse(imageInput),
         material: material || null,
         rating: rating || null,
         category: category || null,
@@ -110,8 +73,7 @@ export async function PUT(req: NextRequest) {
     const name = formData.get("name") as string;
     const price = parseFloat(formData.get("price") as string);
     const description = formData.get("description") as string;
-    const imageInput = formData.get("image");
-    const imageType = formData.get("imageType") as string; // Added type field
+    const imageInput = formData.get("images") as string;
     const material = formData.get("material") as string;
     const category = formData.get("category") as string;
     const subcategory = formData.get("subcategory") as string;
@@ -132,49 +94,14 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    let imageUrl: string;
-
-    if (imageType === "url") {
-      // If it's a URL, use it directly
-      imageUrl = imageInput as string;
-    } else if (imageType === "file") {
-      // If it's a File, upload it to Cloudinary
-      const file = formData.get("image") as File;
-      if (!(file instanceof File)) {
-        return NextResponse.json(
-          { error: "Invalid file input" },
-          { status: 400 }
-        );
-      }
-
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-
-      const uploadResult = await new Promise((resolve, reject) => {
-        cloudinary.v2.uploader
-          .upload_stream({ resource_type: "auto" }, (error, result) => {
-            if (error) reject(error);
-            resolve(result);
-          })
-          .end(buffer);
-      });
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      imageUrl = (uploadResult as any).secure_url;
-    } else {
-      return NextResponse.json(
-        { error: "Invalid image type" },
-        { status: 400 }
-      );
-    }
-    // Update product in the database
+    // // Update product in the database
     const updatedProduct = await prisma.product.update({
       where: { id },
       data: {
         name,
         price,
         description,
-        image: imageUrl,
+        image: JSON.parse(imageInput),
         material: material || null,
         category: category || null,
         subcategory: subcategory || null,
