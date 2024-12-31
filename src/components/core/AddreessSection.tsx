@@ -2,11 +2,11 @@ import { MapPinIcon, PhoneIcon, ClockIcon } from "lucide-react";
 
 export default function AddressSection() {
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 my-16">
+    <div className="w-full max-w-6xl mx-auto px-0 lg:px-4 my-16">
       <h2 className="text-3xl font-semibold text-yellow-400 mb-8 text-center">
         Visit Our Boutique
       </h2>
-      <div className="bg-black bg-opacity-50 p-8 rounded-lg shadow-lg">
+      <div className="bg-black bg-opacity-50 p-4 lg:p-8 rounded-lg shadow-lg">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-4">
             <div className="flex items-start space-x-3">

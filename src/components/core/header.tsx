@@ -3,12 +3,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import CartSheet from "./CartSheet";
 
 const Header: React.FC = () => {
   const pathname = usePathname();
   const commonSpanClass =
     "block absolute h-0.5 w-full bg-yellow-600 transition-all duration-700 ease-in-out";
   const [open, setOpen] = useState(false);
+
   const menuOptions = [
     {
       id: 1,
@@ -16,13 +18,15 @@ const Header: React.FC = () => {
       url: "/products",
     },
   ];
+
   const handleHamburgerClick = () => {
     setOpen(!open);
   };
+
   return (
     <header
-      className={`px-2 sm:px-16 2xl:px-40 z-50 py-2 sm:py-3 border-b bg-gradient-to-t from-black to-gray-900  w-full fixed lg:block top-0 lg:top-none ${
-        open ? " left-0 right-0 bottom-auto shadow-md" : ""
+      className={`px-2 sm:px-16 2xl:px-40 z-50 py-2 sm:py-3 border-b bg-gradient-to-t from-black to-gray-900 w-full fixed lg:block top-0 lg:top-none ${
+        open ? "left-0 right-0 bottom-auto shadow-md" : ""
       }`}
     >
       <nav className="flex justify-between 2xl:max-w-6xl mx-auto">
@@ -39,7 +43,7 @@ const Header: React.FC = () => {
           <div
             className={`${
               open
-                ? "left-[0%] bg-black shadow-md border-t border-yellow-600  ps-1"
+                ? "left-[0%] bg-black shadow-md border-t border-yellow-600 ps-1"
                 : "left-[-100%]"
             } navLinks duration-500 absolute lg:static lg:w-auto
                             w-full lg:h-auto h-[92vh] flex lg:items-center gap-[1.5vw] top-full`}
@@ -89,8 +93,11 @@ const Header: React.FC = () => {
             </ul>
           </div>
 
+          {/* Cart Button with Count */}
+          <CartSheet />
+
           <div
-            className="w-10 h-10  rounded-full cursor-pointer lg:hidden p-2 ms-[3vw]"
+            className="w-10 h-10 rounded-full cursor-pointer lg:hidden p-2 ms-[3vw]"
             onClick={handleHamburgerClick}
           >
             <div className="relative transition-all duration-700 ease-in-out">

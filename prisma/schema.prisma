@@ -10,7 +10,7 @@ datasource db {
 model Admin {
   id        String   @id @default(cuid())
   email     String   @unique
-  password  String   // Store hashed passwords
+  password  String
   createdAt DateTime @default(now())
 }
 
@@ -19,12 +19,14 @@ model Product {
   name        String
   description String
   price       Float
-  image       String[] // Changed from String to String[]
-  material    String?  // Material of the product (optional)
-  rating      Float?   // Rating of the product (optional, decimal value)
-  category    String?  // Category of the product (e.g., Jewelry, Accessories)
-  subcategory String?  // Subcategory of the product (e.g., Earrings, Necklaces)
-  gender      String   @default("Unisex") // Default value for existing rows
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  category    String?
+  gender      String   @default("Unisex")
+  material    String?
+  rating      Float?
+  subcategory String?
+  image       String[]
+
+  @@index([id])
 }

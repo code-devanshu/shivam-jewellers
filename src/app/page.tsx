@@ -1,28 +1,20 @@
-import AddressSection from "@/components/AddreessSection";
-import CountdownTimer from "@/components/CountdownTimer";
-import Gallery from "@/components/Gallery";
-import { RingIcon, NecklaceIcon } from "@/components/JewelryIcon";
+import AddressSection from "@/components/core/AddreessSection";
+import CountdownTimer from "@/components/core/CountdownTimer";
+import Gallery from "@/components/core/Gallery";
+import { RingIcon, NecklaceIcon } from "@/components/core/JewelryIcon";
+import ProductsSection from "@/components/core/ProductsSection";
+import { prisma } from "@/lib/prisma";
+import { Product } from "@/model/base.model";
 import { Gem } from "lucide-react";
-import ProductsSection from "./components/ProductsSection";
 
 export const revalidate = 60; // Revalidate every 60 seconds
 
 export default async function Home() {
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/api/products`,
-      {
-        method: "GET",
-        next: { revalidate: 60 }, // Ensure fresh data is fetched every time
-      }
-    );
-
-    if (!response.ok) {
-      console.error("Failed to fetch products:", response.statusText);
-      throw new Error("Failed to fetch products");
-    }
-
-    const products = await response.json();
+    const products = (await prisma.product.findMany({
+      take: 6, // Limit to 10 records
+      orderBy: { createdAt: "desc" }, // Sort by creation date
+    })) as Product[];
 
     return (
       <div className="bg-black">

@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { Socialicon } from "@/components/Socialicon";
-import Header from "@/components/header";
+import { Socialicon } from "@/components/core/Socialicon";
+import Header from "@/components/core/header";
 import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { CartProvider } from "@/context/CartContext";
+import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -60,17 +63,23 @@ export default async function RootLayout({
           !shouldHideHeaderFooter ? "bg-black" : ""
         }`}
       >
-        {!shouldHideHeaderFooter && <Header />}
+        <CartProvider>
+          {!shouldHideHeaderFooter && <Header />}
 
-        <div
-          className={`${
-            !shouldHideHeaderFooter && "mt-10 sm:mt-14 md:mt-16 lg:mt-[4.5rem] "
-          }`}
-        >
-          {children}
-        </div>
+          <TooltipProvider>
+            <div
+              className={`${
+                !shouldHideHeaderFooter &&
+                "mt-10 sm:mt-14 md:mt-16 lg:mt-[4.5rem] "
+              }`}
+            >
+              {children}
+            </div>
+          </TooltipProvider>
 
-        <Socialicon />
+          <Socialicon />
+          <Toaster />
+        </CartProvider>
       </body>
     </html>
   );

@@ -1,24 +1,67 @@
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { IndianRupee, Star } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { TooltipProvider } from "@radix-ui/react-tooltip";
 import { Badge } from "@/components/ui/badge";
-import ProductImageViewer from "../components/ProductImageViewer";
+import ProductImageViewer from "@/app/products/components/ProductImageViewer";
+import ProductActions from "@/app/products/components/ProductActions";
 import { Product } from "@/model/base.model";
+import JewelryProductCard from "@/components/core/ProductCard";
+import { Metadata } from "next";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: { id?: string };
+}): Promise<Metadata> {
+  const product = await prisma.product.findUnique({
+    where: { id: searchParams.id },
+    select: {
+      name: true,
+      description: true,
+      category: true,
+      subcategory: true,
+      image: true,
+    },
+  });
+
+  if (!product) {
+    return {
+      title: "Product Not Found - Shivam Jewellers",
+      description: "The product you are looking for does not exist.",
+    };
+  }
+
+  return {
+    title: `${product.name} - Shivam Jewellers`,
+    description: product.description.slice(0, 160),
+    openGraph: {
+      title: `${product.name} - Shivam Jewellers`,
+      description: product.description.slice(0, 160),
+      images: product.image.map((img) => ({
+        url: img,
+        alt: product.name,
+      })),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${product.name} - Shivam Jewellers`,
+      description: product.description.slice(0, 160),
+      images: product.image[0] || "",
+    },
+  };
+}
 
 export default async function ProductDetailPage({
   searchParams,
 }: {
   searchParams: { id?: string };
 }) {
-  // Fetch session and product data
   const session = await getServerSession(authOptions);
   const isLoggedIn = !!session;
 
@@ -28,6 +71,7 @@ export default async function ProductDetailPage({
     return <div className="text-center text-red-500">Product not found</div>;
   }
 
+  // Fetch the current product
   const product = (await prisma.product.findUnique({
     where: { id: productId },
   })) as Product;
@@ -36,14 +80,29 @@ export default async function ProductDetailPage({
     return <div className="text-center text-red-500">Product not found</div>;
   }
 
-  return (
-    <TooltipProvider>
-      <div className="max-w-7xl mx-auto py-12 px-6 bg-black">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Left Side - Client Component */}
-          <ProductImageViewer images={product.image} />
+  // Fetch related products
+  const relatedProducts = (await prisma.product.findMany({
+    where: {
+      id: { not: productId }, // Exclude the current product
+      AND: [
+        { category: product.category },
+        { subcategory: product.subcategory },
+        { gender: product.gender },
+      ],
+    },
+    take: 3, // Limit to 4 related products
+  })) as Product[];
 
-          {/* Right Side - Server Component */}
+  return (
+    <>
+      <div className="max-w-7xl mx-auto py-12 px-6 bg-black overflow-hidden">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Left Side - Product Images */}
+          <div className="flex justify-center lg:justify-start w-full lg:w-1/2">
+            <ProductImageViewer images={product.image} />
+          </div>
+
+          {/* Right Side - Product Details */}
           <div className="w-full lg:w-1/2">
             <h1 className="text-4xl font-bold mb-4 text-white">
               {product.name}
@@ -127,21 +186,35 @@ export default async function ProductDetailPage({
               </p>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-4">
-              <Button className="bg-yellow-600 text-black hover:bg-yellow-700 px-6 py-3">
-                Add to Cart
-              </Button>
-              <Button
-                variant="outline"
-                className="text-yellow-600 border-yellow-600 hover:bg-yellow-700 hover:text-black"
-              >
-                Favorite
-              </Button>
-            </div>
+            {/* Action Buttons - Client Component */}
+            <ProductActions product={product} />
+          </div>
+        </div>
+
+        {/* Related Products Section */}
+        <div className="mt-12">
+          <h2 className="text-2xl font-bold text-yellow-600 mb-6">
+            Related Products
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
+            {relatedProducts.map((product) => (
+              <JewelryProductCard
+                key={product.id}
+                id={product.id}
+                name={product.name}
+                image={product.image[0]}
+                description={product.description}
+                material={product.material}
+                category={product.category}
+                subcategory={product.subcategory}
+                price={product.price}
+                gender={product.gender}
+                isLoggedIn={isLoggedIn} // Placeholder for logged-in status, replace with actual logic when implemented.
+              />
+            ))}
           </div>
         </div>
       </div>
-    </TooltipProvider>
+    </>
   );
 }

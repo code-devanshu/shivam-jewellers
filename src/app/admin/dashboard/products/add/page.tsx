@@ -1,36 +1,57 @@
+export const dynamic = "force-dynamic";
+
 import ProductForm from "../components/ProductForm";
 
 const AddProductPage = async () => {
-  const cloudinary = await fetchAllImages();
+  async function fetchAllImageUrls(): Promise<string[]> {
+    let cursor: string | undefined = undefined;
+    const allImageUrls: string[] = [];
 
-  async function fetchAllImages() {
-    let cursor = undefined;
-    const allImages = [];
+    try {
+      do {
+        const res = await fetch(
+          `${process.env.BASE_URL}/api/cloudinary-images?cursor=${
+            cursor || ""
+          }`,
+          { cache: "no-store" } // Avoid caching for fresh data
+        );
 
-    do {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const res: any = await fetch(
-        `${process.env.NEXT_PUBLIC_BASE_URL}/api/cloudinary-images?cursor=${
-          cursor || ""
-        }`
-      );
+        if (!res.ok) {
+          throw new Error(`Failed to fetch images: ${res.statusText}`);
+        }
 
-      const data = await res.json();
+        const data: {
+          images: { secure_url: string }[];
+          next_cursor?: string;
+        } = await res.json();
 
-      if (data.images) {
-        allImages.push(...data.images);
-      }
+        if (data.images) {
+          allImageUrls.push(...data.images.map((image) => image.secure_url));
+        }
 
-      cursor = data.next_cursor;
-    } while (cursor); // Continue fetching until there's no next cursor
+        cursor = data.next_cursor;
 
-    return allImages;
+        // Introduce a delay between requests
+        if (cursor) {
+          await new Promise((resolve) => setTimeout(resolve, 200)); // 200ms delay
+        }
+      } while (cursor);
+    } catch (error) {
+      console.error("Error fetching Cloudinary image URLs:", error);
+    }
+
+    return allImageUrls;
   }
+
+  const imageUrls = await fetchAllImageUrls();
+
+  console.log("imageUrls", imageUrls);
 
   return (
     <div className="max-w-6xl mx-auto mt-10">
-      <ProductForm cloudinaryImages={cloudinary} />
+      <ProductForm cloudinaryImages={imageUrls} />
     </div>
   );
 };
+
 export default AddProductPage;

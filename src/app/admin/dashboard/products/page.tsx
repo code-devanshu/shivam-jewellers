@@ -11,14 +11,12 @@ import { IndianRupee } from "lucide-react";
 import ProductsClient from "./components/products-client";
 import Link from "next/link";
 import { Product } from "@/model/base.model";
+import { prisma } from "@/lib/prisma";
 
 export default async function ProductsPage() {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/products`);
-  if (!res.ok) {
-    console.error("Failed to fetch products");
-    return;
-  }
-  const products: Product[] = await res.json();
+  const products = (await prisma.product.findMany({
+    orderBy: { createdAt: "desc" }, // Sort by creation date
+  })) as Product[];
 
   return (
     <div className="p-6">
