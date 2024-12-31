@@ -36,6 +36,8 @@ export default function ProductForm({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // console.log("cloudinaryImages", cloudinaryImages);
+
   // Watch fields for controlled inputs
   const gender = watch("gender", defaultValues.gender || "");
   const category = watch("category", defaultValues.category || "");

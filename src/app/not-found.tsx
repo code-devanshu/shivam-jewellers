@@ -1,4 +1,4 @@
-import BuildingPage from "@/components/ComingSoon";
+import BuildingPage from "@/components/core/ComingSoon";
 
 const NotFound = () => {
   return <BuildingPage />;

@@ -3,15 +3,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function ProductDetailSkeleton() {
   return (
     <div className="max-w-7xl mx-auto py-12 px-6 bg-black">
-      <div className="flex flex-col lg:flex-row items-start lg:items-center gap-8">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center gap-2 lg:gap-8">
         {/* Left Side - Image Viewer Skeleton */}
-        <div className="w-full lg:w-1/2 flex space-x-6 flex-row">
+        <div className="w-full lg:w-1/2 flex flex-col space-x-0 lg:space-x-6 lg:flex-row">
           {/* Thumbnail Skeletons */}
-          <div className="grid grid-cols-1 gap-4 mb-4">
+          <div className="grid grid-cols-4 lg:grid-cols-1 gap-4 mb-4">
             {Array.from({ length: 4 }).map((_, idx) => (
               <Skeleton
                 key={idx}
-                className="w-20 h-20 rounded-md bg-gray-800"
+                className="w-18 lg:w-20 h-16 lg:h-20 rounded-md bg-gray-800"
               />
             ))}
           </div>

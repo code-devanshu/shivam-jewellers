@@ -1,21 +1,13 @@
-import ProductsSection from "../components/ProductsSection";
+import ProductsSection from "@/components/core/ProductsSection";
+import { prisma } from "@/lib/prisma";
+import { Product } from "@/model/base.model";
 
 export const revalidate = 60; // Revalidate every 60 seconds
 const Products = async () => {
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/products`,
-    {
-      method: "GET",
-      next: { revalidate: 60 }, // Ensure fresh data is fetched every time
-    }
-  );
+  const products = (await prisma.product.findMany({
+    orderBy: { createdAt: "desc" }, // Sort by creation date
+  })) as Product[];
 
-  if (!response.ok) {
-    console.error("Failed to fetch products:", response.statusText);
-    throw new Error("Failed to fetch products");
-  }
-
-  const products = await response.json();
   return (
     <div className="max-w-7xl mx-auto p-2">
       <h1>Product cards</h1>
