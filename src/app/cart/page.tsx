@@ -4,6 +4,7 @@ import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { TrashIcon } from "lucide-react";
+import { formatPrice } from "@/lib/utils";
 
 export default function CartPage() {
   const { cartItems, updateCartItemQuantity, removeFromCart } = useCart();
@@ -21,7 +22,9 @@ export default function CartPage() {
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left Section - Cart Items */}
         <div className="w-full lg:w-2/3 h-[calc(100vh-96px)] overflow-y-auto">
-          <h1 className="text-3xl font-bold mb-6">Bag</h1>
+          <h1 className="text-3xl font-bold mb-6 ms-2 underline underline-offset-8 decoration-yellow-600">
+            Your cart
+          </h1>
           <div className="space-y-6">
             {cartItems.length > 0 ? (
               cartItems.map((item) => (
@@ -55,14 +58,14 @@ export default function CartPage() {
                   <div className="flex flex-col items-end justify-between">
                     {/* Price */}
                     <p className="text-lg font-bold text-yellow-600">
-                      ₹ {item.product.price.toFixed(2)}
+                      {formatPrice(item.product.price * item.quantity)}
                     </p>
 
                     {/* Quantity Controls */}
                     <div className="flex items-center gap-2 mt-2">
                       <Button
                         variant="outline"
-                        className="border-gray-400 text-gray-500 hover:bg-gray-200"
+                        className="border-gray-400 text-gray-500 hover:bg-gray-200 hover:text-black"
                         onClick={() =>
                           updateCartItemQuantity(
                             item.product.id,
@@ -75,7 +78,7 @@ export default function CartPage() {
                       <span className="text-white">{item.quantity}</span>
                       <Button
                         variant="outline"
-                        className="border-gray-400 text-gray-500 hover:bg-gray-200"
+                        className="border-gray-400 text-gray-500 hover:bg-gray-200 hover:text-black"
                         onClick={() =>
                           updateCartItemQuantity(
                             item.product.id,
@@ -112,18 +115,18 @@ export default function CartPage() {
               {/* Subtotal */}
               <div className="flex justify-between">
                 <p className="text-gray-400">Subtotal</p>
-                <p className="text-white">₹ {subtotal.toFixed(2)}</p>
+                <p className="text-white">{formatPrice(subtotal)}</p>
               </div>
               {/* Delivery Fee */}
               <div className="flex justify-between">
                 <p className="text-gray-400">Estimated Delivery & Handling</p>
-                <p className="text-white">₹ {deliveryFee.toFixed(2)}</p>
+                <p className="text-white">{formatPrice(deliveryFee)}</p>
               </div>
               {/* Total */}
               <div className="flex justify-between border-t border-gray-700 pt-4">
                 <p className="text-lg font-bold">Total</p>
                 <p className="text-lg font-bold text-yellow-600">
-                  ₹ {total.toFixed(2)}
+                  {formatPrice(total)}
                 </p>
               </div>
             </div>

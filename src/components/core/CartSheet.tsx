@@ -43,7 +43,7 @@ export default function CartSheet() {
           </div>
         </Button>
       </SheetTrigger>
-      <SheetContent className="flex flex-col pr-0 sm:max-w-lg bg-white">
+      <SheetContent className="flex flex-col pr-0 sm:max-w-lg bg-white sm:rounded-lg sm:mx-auto md:mx-0 md:max-w-lg md:rounded-lg md:border md:border-gray-300 md:shadow-lg w-full min-h-screen">
         <SheetHeader className="px-1">
           <SheetTitle>Cart {itemCount > 0 && `(${itemCount})`}</SheetTitle>
         </SheetHeader>
@@ -51,12 +51,14 @@ export default function CartSheet() {
         {itemCount > 0 && (
           <div className="flex flex-col gap-5 overflow-hidden">
             <ScrollArea className="h-full">
-              <div className="flex flex-col gap-5 pr-6">
-                {cartItems.map((item) => (
-                  <div key={item.product.id} className="space-y-3">
-                    <CartItem item={item} />
-                  </div>
-                ))}
+              <div className="flex flex-col gap-2 pr-6">
+                <div className="flex flex-col gap-5">
+                  {cartItems.map((item) => (
+                    <div key={item.product.id} className="space-y-3">
+                      <CartItem item={item} />
+                    </div>
+                  ))}
+                </div>
 
                 <SheetClose asChild>
                   <Link
