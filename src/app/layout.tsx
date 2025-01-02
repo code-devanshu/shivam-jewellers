@@ -59,6 +59,10 @@ export default async function RootLayout({
   const shouldHideHeaderFooter = session?.user?.email === "admin@admin.com";
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://res.cloudinary.com" />
+        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased ${
           !shouldHideHeaderFooter ? "bg-black" : ""
