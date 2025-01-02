@@ -21,31 +21,55 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Shivam Jewellers - Gold & Silver Jewellery in Deoria",
+  title: "Shivam Jewellers - Handcrafted Gold & Silver Jewellery in Deoria",
   description:
-    "Explore handcrafted gold and silver jewellery at Shivam Jewellers, located at Mahasay Ji Ki Gali, Malviya Road, Deoria, UP. We bring you affordable luxury with timeless designs rooted in cultural significance.",
+    "Discover the finest handcrafted gold and silver jewellery at Shivam Jewellers in Deoria. Shop engagement rings, wedding jewelry, and traditional cultural designs at affordable prices.",
   keywords: [
     "Shivam Jewellers",
-    "Gold jewellery",
-    "Silver jewellery",
-    "Handcrafted jewellery",
-    "Jewellery in Deoria",
+    "Gold jewellery in Deoria",
+    "Silver jewellery in Deoria",
+    "Handcrafted jewellery Deoria",
+    "Engagement rings",
+    "Wedding rings",
+    "Bridal jewelry",
+    "Traditional jewellery designs",
     "Affordable luxury jewellery",
-    "Cultural jewellery designs",
+    "Custom jewellery Deoria",
+    "Cultural jewellery Deoria",
+    "Jewelry stores near me",
+    "Gold earrings",
+    "Diamond rings",
+    "Fashion jewellery",
+    "Antique jewellery",
+    "Designer jewellery",
   ],
   openGraph: {
-    title: "Shivam Jewellers - Gold & Silver Jewellery",
+    title: "Shivam Jewellers - Handcrafted Gold & Silver Jewellery",
     description:
-      "Discover the finest handcrafted gold and silver jewellery at Shivam Jewellers. Affordable luxury and cultural heritage in every piece.",
+      "Explore handcrafted engagement rings, gold earrings, silver necklaces, and bridal jewelry at Shivam Jewellers in Deoria. Affordable luxury and timeless cultural designs await.",
     url: "https://shivamjewellers.com", // Replace with your actual website URL
     type: "website",
     locale: "en_US",
+    images: [
+      {
+        url: "https://shivamjewellers.com/assets/images/og-image.jpg", // Replace with an actual image URL
+        width: 1200,
+        height: 630,
+        alt: "Shivam Jewellers - Handcrafted Gold & Silver Jewellery",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Shivam Jewellers - Gold & Silver Jewellery",
+    title: "Shivam Jewellers - Handcrafted Gold & Silver Jewellery in Deoria",
     description:
-      "Explore the best of gold and silver jewellery at Shivam Jewellers in Deoria. Handcrafted elegance for every occasion.",
+      "Shop exquisite gold, silver, diamond, and bridal jewelry at Shivam Jewellers. Custom designs and cultural elegance for every occasion.",
+    images: [
+      {
+        url: "https://shivamjewellers.com/assets/images/twitter-card.jpg", // Replace with an actual Twitter image URL
+        alt: "Shivam Jewellers - Jewelry in Deoria",
+      },
+    ],
   },
 };
 
