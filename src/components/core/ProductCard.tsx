@@ -15,18 +15,9 @@ import {
 } from "@/components/ui/tooltip";
 import { IndianRupee, Star } from "lucide-react";
 import Link from "next/link";
+import { Product } from "@/model/base.model";
 
-interface JewelryProductProps {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  material?: string;
-  image: string;
-  rating?: number;
-  category?: string;
-  subcategory?: string;
-  gender: "Men" | "Women" | "Unisex";
+interface JewelryProductProps extends Product {
   isLoggedIn: boolean; // Prop to check if the user is logged in
 }
 
@@ -60,7 +51,7 @@ export default function JewelryProductCard({
         <CardHeader className="p-0">
           <div className="relative overflow-hidden cursor-pointer h-60 w-full">
             <Image
-              src={image}
+              src={image[0]}
               alt={name}
               layout="fill"
               objectFit="cover"

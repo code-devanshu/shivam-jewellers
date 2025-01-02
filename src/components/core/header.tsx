@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import CartSheet from "./CartSheet";
 
-const Header: React.FC = () => {
+const Header = () => {
   const pathname = usePathname();
   const commonSpanClass =
     "block absolute h-0.5 w-full bg-yellow-600 transition-all duration-700 ease-in-out";

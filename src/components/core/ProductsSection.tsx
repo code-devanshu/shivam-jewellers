@@ -14,6 +14,7 @@ export default async function ProductsSection({
   // Fetch the session (user info) on the server
   const session = await getServerSession(authOptions);
   const isLoggedIn = !!session;
+
   return (
     <section className="py-12">
       <h2 className="text-center text-3xl font-bold text-yellow-400 mb-8">
@@ -28,7 +29,7 @@ export default async function ProductsSection({
               key={product.id}
               id={product.id}
               name={product.name}
-              image={product.image[0]}
+              image={product.image}
               description={product.description}
               material={product.material}
               category={product.category}

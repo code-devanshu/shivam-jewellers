@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -10,52 +11,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import ProductImageViewer from "@/app/products/components/ProductImageViewer";
 import ProductActions from "@/app/products/components/ProductActions";
-import { Product } from "@/model/base.model";
 import JewelryProductCard from "@/components/core/ProductCard";
-import { Metadata } from "next";
-
-export async function generateMetadata({
-  searchParams,
-}: {
-  searchParams: { id?: string };
-}): Promise<Metadata> {
-  const product = await prisma.product.findUnique({
-    where: { id: searchParams.id },
-    select: {
-      name: true,
-      description: true,
-      category: true,
-      subcategory: true,
-      image: true,
-    },
-  });
-
-  if (!product) {
-    return {
-      title: "Product Not Found - Shivam Jewellers",
-      description: "The product you are looking for does not exist.",
-    };
-  }
-
-  return {
-    title: `${product.name} - Shivam Jewellers`,
-    description: product.description.slice(0, 160),
-    openGraph: {
-      title: `${product.name} - Shivam Jewellers`,
-      description: product.description.slice(0, 160),
-      images: product.image.map((img) => ({
-        url: img,
-        alt: product.name,
-      })),
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: `${product.name} - Shivam Jewellers`,
-      description: product.description.slice(0, 160),
-      images: product.image[0] || "",
-    },
-  };
-}
+import { Product } from "@/model/base.model";
+import RelatedProductsSkeleton from "./RelatedProductsSkeleton";
 
 export default async function ProductDetailPage({
   searchParams,
@@ -71,7 +29,7 @@ export default async function ProductDetailPage({
     return <div className="text-center text-red-500">Product not found</div>;
   }
 
-  // Fetch the current product
+  // Fetch the main product details
   const product = (await prisma.product.findUnique({
     where: { id: productId },
   })) as Product;
@@ -79,19 +37,6 @@ export default async function ProductDetailPage({
   if (!product) {
     return <div className="text-center text-red-500">Product not found</div>;
   }
-
-  // Fetch related products
-  const relatedProducts = (await prisma.product.findMany({
-    where: {
-      id: { not: productId }, // Exclude the current product
-      AND: [
-        { category: product.category },
-        { subcategory: product.subcategory },
-        { gender: product.gender },
-      ],
-    },
-    take: 3, // Limit to 4 related products
-  })) as Product[];
 
   return (
     <>
@@ -187,7 +132,7 @@ export default async function ProductDetailPage({
             </div>
 
             {/* Action Buttons - Client Component */}
-            <ProductActions product={product} />
+            <ProductActions isLoggedIn={isLoggedIn} product={product} />
           </div>
         </div>
 
@@ -196,25 +141,58 @@ export default async function ProductDetailPage({
           <h2 className="text-2xl font-bold text-yellow-600 mb-6">
             Related Products
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
-            {relatedProducts.map((product) => (
-              <JewelryProductCard
-                key={product.id}
-                id={product.id}
-                name={product.name}
-                image={product.image[0]}
-                description={product.description}
-                material={product.material}
-                category={product.category}
-                subcategory={product.subcategory}
-                price={product.price}
-                gender={product.gender}
-                isLoggedIn={isLoggedIn} // Placeholder for logged-in status, replace with actual logic when implemented.
-              />
-            ))}
-          </div>
+          <Suspense fallback={<RelatedProductsSkeleton />}>
+            {/* Related Products */}
+            <RelatedProducts
+              productId={productId}
+              isLoggedIn={isLoggedIn}
+              product={product}
+            />
+          </Suspense>
         </div>
       </div>
     </>
+  );
+}
+
+async function RelatedProducts({
+  productId,
+  product,
+  isLoggedIn,
+}: {
+  productId: string;
+  product: Product;
+  isLoggedIn: boolean;
+}) {
+  const relatedProducts = (await prisma.product.findMany({
+    where: {
+      id: { not: productId }, // Exclude the current product
+      AND: [
+        { category: product.category },
+        { subcategory: product.subcategory },
+        { gender: product.gender },
+      ],
+    },
+    take: 3, // Limit to 3 related products
+  })) as Product[];
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
+      {relatedProducts.map((product) => (
+        <JewelryProductCard
+          key={product.id}
+          id={product.id}
+          name={product.name}
+          image={product.image}
+          description={product.description}
+          material={product.material}
+          category={product.category}
+          subcategory={product.subcategory}
+          price={product.price}
+          gender={product.gender}
+          isLoggedIn={isLoggedIn}
+        />
+      ))}
+    </div>
   );
 }

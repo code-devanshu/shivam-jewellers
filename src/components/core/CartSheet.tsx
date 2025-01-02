@@ -21,25 +21,23 @@ export default function CartSheet() {
 
   return (
     <Sheet>
-      <SheetTrigger asChild>
+      <SheetTrigger className="border-none" asChild>
         <Button
           aria-label="Cart"
           variant="outline"
           size="icon"
-          className="relative"
+          className="relative ms-4 group"
         >
-          <div className="relative ms-4">
-            <div
-              className="bg-black text-white border-yellow-600 hover:bg-yellow-700 p-2 rounded-full"
-              aria-label="Cart"
-            >
-              <ShoppingCartIcon className="w-6 h-6" />
-              {itemCount > 0 && (
-                <Badge className="absolute -right-2 -top-2 g-6 w-6 h-6 rounded-full p-2">
-                  {itemCount}
-                </Badge>
-              )}
-            </div>
+          <div
+            className="bg-transaprent text-white hover:bg-yellow-700 p-2 rounded-full"
+            aria-label="Cart"
+          >
+            <ShoppingCartIcon className="w-6 h-6" />
+            {itemCount > 0 && (
+              <Badge className="absolute -right-2 -top-1 w-3 h-3 rounded-full">
+                {itemCount}
+              </Badge>
+            )}
           </div>
         </Button>
       </SheetTrigger>

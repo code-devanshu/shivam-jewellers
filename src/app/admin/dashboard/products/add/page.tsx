@@ -45,8 +45,6 @@ const AddProductPage = async () => {
 
   const imageUrls = await fetchAllImageUrls();
 
-  console.log("imageUrls", imageUrls);
-
   return (
     <div className="max-w-6xl mx-auto mt-10">
       <ProductForm cloudinaryImages={imageUrls} />

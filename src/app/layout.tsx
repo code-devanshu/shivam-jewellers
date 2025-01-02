@@ -55,7 +55,10 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getServerSession(authOptions);
-  const shouldHideHeaderFooter = Boolean(session);
+
+  const shouldHideHeaderFooter = Boolean(
+    session?.user?.email === "admin@admin.com"
+  );
   return (
     <html lang="en">
       <body

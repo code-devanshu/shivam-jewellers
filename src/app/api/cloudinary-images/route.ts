@@ -14,8 +14,6 @@ export async function GET(req: NextRequest) {
   try {
     const cursor = req.nextUrl.searchParams.get("cursor") || undefined;
 
-    console.log("Fetching images from Cloudinary with cursor:", cursor);
-
     // Fetch resources from Cloudinary with pagination
     const { resources, next_cursor } = await cloudinary.v2.api.resources({
       type: "upload",

@@ -5,43 +5,55 @@ import { useCart } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { Product } from "@/model/base.model";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 interface ProductActionsProps {
   product: Product;
+  isLoggedIn: boolean;
 }
 
-export default function ProductActions({ product }: ProductActionsProps) {
+export default function ProductActions({
+  product,
+  isLoggedIn,
+}: ProductActionsProps) {
   const { cartItems, addToCart, updateCartItemQuantity } = useCart();
 
   const cartItem = cartItems.find((item) => item.product.id === product.id);
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleAddToCart = () => {
-    addToCart(product);
+    if (isLoggedIn) {
+      addToCart(product);
 
-    // Show a toast notification with adjusted alignment and UI
-    toast({
-      title: "Item Added to Cart",
-      description: (
-        <div className="flex items-center gap-4 mt-2">
-          {/* Product Image */}
-          <Image
-            src={product.image[0]} // Assuming product.image is an array of URLs
-            alt={product.name}
-            width={50}
-            height={50}
-            className="rounded-md object-cover"
-          />
-          <div>
-            {/* Product Name */}
-            <p className="font-semibold text-white">{product.name}</p>
-            {/* Success Message */}
-            <p className="text-sm text-gray-400">Added to cart successfully!</p>
+      // Show a toast notification with adjusted alignment and UI
+      toast({
+        title: "Item Added to Cart",
+        description: (
+          <div className="flex items-center gap-4 mt-2">
+            {/* Product Image */}
+            <Image
+              src={product.image[0]} // Assuming product.image is an array of URLs
+              alt={product.name}
+              width={50}
+              height={50}
+              className="rounded-md object-cover"
+            />
+            <div>
+              {/* Product Name */}
+              <p className="font-semibold text-white">{product.name}</p>
+              {/* Success Message */}
+              <p className="text-sm text-gray-400">
+                Added to cart successfully!
+              </p>
+            </div>
           </div>
-        </div>
-      ),
-      className: "bg-black border border-yellow-600 text-white shadow-lg", // Styled for dark theme
-    });
+        ),
+        className: "bg-black border border-yellow-600 text-white shadow-lg", // Styled for dark theme
+      });
+    } else {
+      router.push("/login");
+    }
   };
 
   return (

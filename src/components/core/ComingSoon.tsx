@@ -20,17 +20,17 @@ export default function BuildingPage() {
       {/* Main content */}
       <div className="z-10 max-w-lg text-center space-y-6">
         <div className="flex items-center justify-center space-x-2 md:space-x-4">
-          <Rocket className="h-10 w-10 text-blue-500 animate-bounce" />
-          <h1 className="text-4xl font-bold text-yellow-600">
+          <Rocket className="h-6 lg:h-10 w-6 lg:w-10 text-blue-500 animate-bounce" />
+          <h1 className="text-2xl lg:text-4xl font-bold text-yellow-600">
             We Are Building It
           </h1>
-          <Wrench className="h-10 w-10 text-blue-500 animate-spin" />
+          <Wrench className="h-6 lg:h-10 w-6 lg:w-10 text-blue-500 animate-spin" />
         </div>
-        <p className="text-slate-300 text-lg">
+        <p className="text-slate-300 text-base lg:text-lg">
           Our team is hard at work crafting something amazing for you. Stay
           tuned—exciting things are on the way!
         </p>
-        <p className="text-sm text-slate-400">
+        <p className="text-xs lg:text-sm text-slate-400">
           Need updates? Feel free to get in touch or check back soon.
         </p>
       </div>
