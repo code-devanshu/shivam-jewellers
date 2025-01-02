@@ -56,9 +56,7 @@ export default async function RootLayout({
 }>) {
   const session = await getServerSession(authOptions);
 
-  const shouldHideHeaderFooter = Boolean(
-    session?.user?.email === "admin@admin.com"
-  );
+  const shouldHideHeaderFooter = session?.user?.email === "admin@admin.com";
   return (
     <html lang="en">
       <body

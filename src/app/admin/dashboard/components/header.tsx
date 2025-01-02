@@ -29,6 +29,7 @@ export function Header({ user }: HeaderProps) {
   const handleLogout = async () => {
     await signOut();
     router.push("/admin/login");
+    router.refresh();
   };
 
   return (

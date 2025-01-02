@@ -40,7 +40,7 @@ export default async function ProductDetailPage({
 
   return (
     <>
-      <div className="max-w-7xl mx-auto py-12 px-6 bg-black overflow-hidden">
+      <div className="max-w-7xl mx-auto py-12 px-2 lg:px-6 bg-black overflow-hidden">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Left Side - Product Images */}
           <div className="flex justify-center lg:justify-start w-full lg:w-1/2">

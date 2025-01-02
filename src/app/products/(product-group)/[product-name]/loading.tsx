@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ProductDetailSkeleton() {
   return (
-    <div className="max-w-7xl mx-auto py-12 px-6 bg-black">
+    <div className="max-w-7xl mx-auto py-12 px-2 lg:px-6 bg-black">
       <div className="flex flex-col lg:flex-row items-start lg:items-center gap-2 lg:gap-8">
         {/* Left Side - Image Viewer Skeleton */}
         <div className="w-full lg:w-1/2 flex flex-col space-x-0 lg:space-x-6 lg:flex-row">
@@ -16,7 +16,7 @@ export default function ProductDetailSkeleton() {
             ))}
           </div>
           {/* Main Image Skeleton */}
-          <Skeleton className="w-full h-[30rem] rounded-lg bg-gray-800" />
+          <Skeleton className="w-full h-[40rem] rounded-lg bg-gray-800" />
         </div>
 
         {/* Right Side - Details Skeleton */}

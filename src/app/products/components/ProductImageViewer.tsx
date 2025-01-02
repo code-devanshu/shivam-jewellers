@@ -56,6 +56,7 @@ export default function ProductImageViewer({ images }: { images: string[] }) {
           alt="Main Product Image"
           width="500"
           height="500"
+          className="max-h-[40rem]"
         />
         {/* Left Arrow */}
         <button

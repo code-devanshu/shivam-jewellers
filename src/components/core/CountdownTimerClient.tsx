@@ -2,17 +2,21 @@
 
 import { useEffect, useState } from "react";
 
-interface CountdownTimerProps {
-  targetDate: string; // ISO format, e.g., "2024-12-31T23:59:59Z"
+interface CountdownTimerClientProps {
+  initialTimeLeft: {
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+  };
+  targetDate: string;
 }
 
-export default function CountdownTimer({ targetDate }: CountdownTimerProps) {
-  const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  });
+export default function CountdownTimerClient({
+  initialTimeLeft,
+  targetDate,
+}: CountdownTimerClientProps) {
+  const [timeLeft, setTimeLeft] = useState(initialTimeLeft);
 
   useEffect(() => {
     const target = new Date(targetDate);
