@@ -4,17 +4,19 @@ import ProductTable from "../components/ProductTable";
 import { getProducts } from "../actions/product-actions";
 import SearchBar from "../components/SearchBar";
 
-interface Props {
-  searchParams?: Record<string, string | string[] | undefined>;
-}
-
-export default async function InventoryPage({ searchParams }: Props) {
-  const page = Number(searchParams?.page) || 1;
-  const search =
-    typeof searchParams?.search === "string" ? searchParams.search : "";
+export default async function InventoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string }>;
+}) {
+  console.log("InventoryPage params:", (await searchParams).search);
+  console.log("InventoryPage params:", await searchParams);
+  const { page, search } = await searchParams;
 
   const limit = 10;
-  const { products, total } = await getProducts(page, limit, { search });
+  const { products, total } = await getProducts(page ? +page : 1, limit, {
+    search: search || "",
+  });
   const totalPages = Math.ceil(total / limit);
 
   return (
@@ -33,7 +35,7 @@ export default async function InventoryPage({ searchParams }: Props) {
 
       <div className="rounded-xl bg-white shadow-lg border border-neutral-200 p-6">
         <ProductTable products={products} />
-        <PaginationControls page={page} totalPages={totalPages} />
+        <PaginationControls page={+page} totalPages={totalPages} />
       </div>
     </main>
   );

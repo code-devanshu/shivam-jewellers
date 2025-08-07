@@ -18,7 +18,7 @@ const images = [
 
 export default function Gallery() {
   return (
-    <section className="w-full max-w-6xl mx-auto px-6 py-12">
+    <section className="w-full max-w-6xl mx-auto py-12">
       <h2 className="text-4xl font-serif font-bold text-pink-600 mb-12 text-center tracking-wide drop-shadow-md">
         Our Offline Boutique
       </h2>

@@ -3,6 +3,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 // 🔍 Get single product by ID
 export async function getProductById(id: string) {
@@ -111,6 +112,8 @@ export async function addProduct(formData: FormData) {
     },
   });
 
+  revalidatePath("/(store)");
+  revalidatePath("/shop"); // Revalidate shop page
   redirect("/admin/inventory");
 }
 
@@ -156,6 +159,9 @@ export async function editProduct(formData: FormData) {
     },
   });
 
+  revalidatePath("/(store)");
+
+  revalidatePath("/shop"); // Revalidate shop page
   redirect("/admin/inventory");
 }
 
@@ -171,5 +177,8 @@ export async function deleteProduct(formData: FormData) {
     where: { id },
   });
 
+  revalidatePath("/(store)");
+
+  revalidatePath("/shop"); // Revalidate shop page
   redirect("/admin/inventory");
 }

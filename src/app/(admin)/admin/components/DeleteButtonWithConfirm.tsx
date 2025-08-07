@@ -43,7 +43,7 @@ export default function DeleteButtonWithConfirm({
     const form = document.getElementById(
       `delete-form-${productId}`
     ) as HTMLFormElement;
-    form.submit();
+    form.requestSubmit();
   };
 
   return (

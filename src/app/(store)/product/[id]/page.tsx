@@ -7,31 +7,24 @@ import {
 } from "@/app/(admin)/admin/actions/product-actions";
 import ProductCard from "../../components/ProductCard";
 import { Metadata } from "next";
+import { slugify } from "@/lib/utils";
+import { Suspense } from "react";
 
-interface Props {
-  params: { name: string };
-  searchParams: { id?: string };
-  // plus others if needed
-}
-
-export async function generateMetadata({
-  params,
+export const generateMetadata = async ({
   searchParams,
-}: Props): Promise<Metadata> {
-  // Await params and searchParams just like official docs
-  const resolvedParams = await params;
-  const resolvedSearchParams = await searchParams;
+}: {
+  searchParams: Promise<{ [key: string]: string }>;
+}): Promise<Metadata> => {
+  const { id } = await searchParams;
 
-  const productId = resolvedSearchParams.id;
-
-  if (!productId) {
+  if (!id) {
     return {
       title: "Product Not Found",
       description: "No product id provided",
     };
   }
 
-  const product = await getProductById(productId);
+  const product = await getProductById(id);
 
   if (!product) {
     return {
@@ -46,7 +39,9 @@ export async function generateMetadata({
     openGraph: {
       title: product.name,
       description: product.description ?? "",
-      url: `https://shivamjewllers.co.in/product/${resolvedParams.name}?id=${product.id}`,
+      url: `https://shivamjewllers.co.in/product/${slugify(product.name)}?id=${
+        product.id
+      }`,
       siteName: "Shivam Jewellers",
       images: [
         {
@@ -62,24 +57,22 @@ export async function generateMetadata({
       images: [product.images?.[0] ?? "/placeholder.png"],
     },
   };
-}
+};
 
 export default async function ProductDetailsPage({
-  params,
   searchParams,
 }: {
-  params: { slug: string };
-  searchParams: { id?: string };
+  searchParams: Promise<{ [key: string]: string }>;
 }) {
-  const productId = searchParams?.id;
+  const { id } = await searchParams;
 
-  if (!productId) return notFound();
+  if (!id) return notFound();
 
-  const product = await getProductById(productId);
+  const product = await getProductById(id);
 
   if (!product) return notFound();
 
-  const related = await getRelatedProducts(product.id, product.category || "");
+  const relatedPromise = getRelatedProducts(id, product.category || "");
 
   return (
     <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -94,12 +87,10 @@ export default async function ProductDetailsPage({
 
         {/* Details */}
         <div className="flex-1 space-y-6">
-          {/* Title */}
           <h1 className="text-4xl font-bold text-gray-900 font-serif uppercase tracking-tight">
             {product.name}
           </h1>
 
-          {/* Price + Material */}
           <div className="flex flex-wrap items-center gap-4">
             <p className="text-2xl font-bold text-yellow-600">
               ₹ {product.price.toLocaleString()}
@@ -116,7 +107,6 @@ export default async function ProductDetailsPage({
             )}
           </div>
 
-          {/* Tags */}
           <div className="flex flex-wrap gap-3">
             {product.category && (
               <span className="text-yellow-700 border border-yellow-400 text-xs font-semibold px-3 py-1 rounded-full">
@@ -135,14 +125,12 @@ export default async function ProductDetailsPage({
             )}
           </div>
 
-          {/* Description */}
           {product.description && (
             <p className="text-gray-700 leading-relaxed text-base">
               {product.description}
             </p>
           )}
 
-          {/* Actions (Quantity + Add to Cart) */}
           <div className="pt-4">
             <ProductActions product={product} />
           </div>
@@ -150,18 +138,33 @@ export default async function ProductDetailsPage({
       </div>
 
       {/* Related Products */}
-      {related.length > 0 && (
-        <section className="pt-10 border-t border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            Related Products
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {related.map((item) => (
-              <ProductCard key={item.id} product={item} />
-            ))}
-          </div>
-        </section>
-      )}
+      <Suspense
+        fallback={
+          <p className="mt-10 text-center text-sm text-gray-400">
+            Loading related products...
+          </p>
+        }
+      >
+        {/* This async block handles related product rendering */}
+        {await (async () => {
+          const related = await relatedPromise;
+
+          if (!related || related.length === 0) return null;
+
+          return (
+            <section className="mt-10 pt-10 border-t border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                Related Products
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                {related.map((item) => (
+                  <ProductCard key={item.id} product={item} />
+                ))}
+              </div>
+            </section>
+          );
+        })()}
+      </Suspense>
     </main>
   );
 }

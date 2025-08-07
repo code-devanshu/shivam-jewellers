@@ -3,29 +3,26 @@ import ProductGrid from "./components/ProductGrid";
 import ShopFilterBar from "./components/ShopFilterBar";
 import ShopSortDropdown from "./components/ShopSortDropdown";
 
-interface ShopPageProps {
-  searchParams: {
+export default async function ShopPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
     page?: string;
     minPrice?: string;
     maxPrice?: string;
     sort?: string;
-  };
-}
-
-export default async function ShopPage({
-  searchParams,
-}: {
-  searchParams: ShopPageProps["searchParams"];
+  }>;
 }) {
-  const page = Number(searchParams?.page) || 1;
+  const searchParam = await searchParams;
+  const page = Number(searchParam?.page) || 1;
   const limit = 12;
-  const minPrice = searchParams?.minPrice
-    ? Number(searchParams.minPrice)
+  const minPrice = searchParam?.minPrice
+    ? Number(searchParam.minPrice)
     : undefined;
-  const maxPrice = searchParams?.maxPrice
-    ? Number(searchParams.maxPrice)
+  const maxPrice = searchParam?.maxPrice
+    ? Number(searchParam.maxPrice)
     : undefined;
-  const sort = searchParams?.sort || "best";
+  const sort = searchParam?.sort || "best";
 
   // Use your getProducts action with filter and sort
   const { products, total } = await getProducts(page, limit, {

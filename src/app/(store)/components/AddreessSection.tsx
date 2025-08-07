@@ -2,7 +2,7 @@ import { MapPinIcon, PhoneIcon, ClockIcon } from "lucide-react";
 
 export default function AddressSection() {
   return (
-    <section className="w-full max-w-6xl mx-auto px-4 mt-5 font-serif">
+    <section className="w-full max-w-6xl mx-auto mt-5 font-serif">
       <h2 className="text-3xl font-semibold text-pink-600 mb-8 text-center">
         Visit Our Boutique
       </h2>

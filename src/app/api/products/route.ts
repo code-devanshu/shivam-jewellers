@@ -9,14 +9,14 @@ let products: Product[] = [
     name: "Gold Necklace",
     price: 34999,
     description: "Beautiful handcrafted gold necklace.",
-    image: "/necklace.jpg",
+    images: ["/necklace.jpg"],
   },
   {
     id: uuidv4(),
     name: "Diamond Earrings",
     price: 22999,
     description: "Elegant diamond-studded earrings.",
-    image: "/earrings.jpg",
+    images: ["/earrings.jpg"],
   },
 ];
 
@@ -27,13 +27,13 @@ export async function GET() {
 
 // POST: Add a product
 export async function POST(req: NextRequest) {
-  const { name, price, description, image } = await req.json();
+  const { name, price, description, images } = await req.json();
   const newProduct: Product = {
     id: uuidv4(),
     name,
     price,
     description,
-    image,
+    images,
   };
   products.push(newProduct);
   return NextResponse.json(newProduct, { status: 201 });
