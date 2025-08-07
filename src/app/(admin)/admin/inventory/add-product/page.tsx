@@ -1,5 +1,5 @@
-import { getMetalRates } from "../actions/metal-actions";
-import ProductForm from "../components/ProductForm";
+import { getMetalRates } from "../../actions/metal-actions";
+import ProductForm from "../../components/ProductForm";
 
 export default async function AddProductPage({
   searchParams,

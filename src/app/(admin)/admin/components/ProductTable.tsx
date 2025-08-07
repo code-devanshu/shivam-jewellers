@@ -44,9 +44,9 @@ export default function ProductTable({ products }: Props) {
               <th className="px-4 py-3 text-left font-semibold text-neutral-600">
                 Gender
               </th>
-              <th className="px-4 py-3 text-left font-semibold text-neutral-600">
+              {/* <th className="px-4 py-3 text-left font-semibold text-neutral-600">
                 Description
-              </th>
+              </th> */}
               <th className="px-4 py-3 text-center font-semibold text-neutral-600">
                 Actions
               </th>
@@ -92,11 +92,11 @@ export default function ProductTable({ products }: Props) {
                 <td className="px-4 py-3 text-neutral-700 capitalize">
                   {prod.gender || "-"}
                 </td>
-                <td className="px-4 py-3 text-neutral-700 truncate max-w-xs">
+                {/* <td className="px-4 py-3 text-neutral-700 truncate max-w-xs">
                   {prod.description}
-                </td>
+                </td> */}
                 <td className="px-4 py-3 text-center space-x-2">
-                  <Link href={`/admin/edit-product?id=${prod.id}`}>
+                  <Link href={`/admin/inventory/edit-product?id=${prod.id}`}>
                     <button className="inline-block px-3 py-1 text-xs rounded bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition font-semibold">
                       Edit
                     </button>
