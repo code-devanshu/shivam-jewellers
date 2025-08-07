@@ -3,6 +3,7 @@ import ProductCard from "./components/ProductCard";
 import { getProducts } from "../(admin)/admin/actions/product-actions";
 import AddressSection from "./components/AddreessSection";
 import Gallery from "./components/Gallery";
+import Link from "next/link";
 
 export default async function HomePage() {
   const { products } = await getProducts(1, 8);
@@ -23,12 +24,12 @@ export default async function HomePage() {
             Timeless Jewelry,
             <br /> Crafted for You
           </h1>
-          <a
+          <Link
             href="/shop"
             className="mt-6 sm:mt-8 inline-block bg-gradient-to-r from-pink-600 to-pink-500 text-white font-semibold py-3 sm:py-4 px-8 sm:px-14 rounded shadow-lg hover:from-pink-700 hover:to-pink-600 transition max-w-max"
           >
             Shop Now
-          </a>
+          </Link>
         </div>
       </section>
 

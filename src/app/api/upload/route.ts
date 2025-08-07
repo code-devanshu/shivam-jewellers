@@ -1,35 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import path from "path";
-import fs from "fs/promises";
+import cloudinary from "@/lib/cloudinary";
 
 export async function POST(request: NextRequest) {
   const data = await request.formData();
   const files = data.getAll("images");
 
   const savedFiles: string[] = [];
+
   for (const file of files) {
     if (typeof file === "object" && "arrayBuffer" in file) {
-      const bytes = Buffer.from(await file.arrayBuffer());
-      const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}-${
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (file as any).name
-      }`;
-      const uploadDir = path.join(process.cwd(), "public", "uploads");
-      await fs.mkdir(uploadDir, { recursive: true });
-      const filepath = path.join(uploadDir, filename);
-      await fs.writeFile(filepath, bytes);
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
 
-      const url = `/uploads/${filename}`;
-      savedFiles.push(url);
+      // Create a base64 data URI from the buffer
+      const base64 = buffer.toString("base64");
+      const mime = (file as File).type;
+      const dataUri = `data:${mime};base64,${base64}`;
 
-      // Save to Image library
-      await prisma.image.create({
-        data: {
-          url,
-          altText: null, // You can extend your upload UI to accept alt text later
-        },
-      });
+      try {
+        // Upload to Cloudinary
+        const uploadResponse = await cloudinary.uploader.upload(dataUri, {
+          folder: "shivam-jewellers-assets", // Optional: set folder in Cloudinary
+          public_id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        });
+
+        const url = uploadResponse.secure_url;
+        savedFiles.push(url);
+
+        // Save to DB
+        await prisma.image.create({
+          data: {
+            url,
+            altText: null,
+          },
+        });
+      } catch (error) {
+        console.error("Cloudinary upload error:", error);
+        return NextResponse.json(
+          { error: "Image upload failed" },
+          { status: 500 }
+        );
+      }
     }
   }
 

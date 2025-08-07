@@ -6,7 +6,7 @@ export default function AddressSection() {
       <h2 className="text-3xl font-semibold text-pink-600 mb-8 text-center">
         Visit Our Boutique
       </h2>
-      <div className="p-8 rounded-3xl">
+      <div className="rounded-3xl">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           <div className="space-y-8">
             {/* Address */}
