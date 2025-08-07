@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
     if (typeof file === "object" && "arrayBuffer" in file) {
       const bytes = Buffer.from(await file.arrayBuffer());
       const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}-${
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (file as any).name
       }`;
       const uploadDir = path.join(process.cwd(), "public", "uploads");

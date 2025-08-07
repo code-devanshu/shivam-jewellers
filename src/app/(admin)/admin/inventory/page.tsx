@@ -5,14 +5,15 @@ import { getProducts } from "../actions/product-actions";
 import SearchBar from "../components/SearchBar";
 
 interface Props {
-  searchParams?: { page?: string; search?: string };
+  searchParams?: Record<string, string | string[] | undefined>;
 }
 
 export default async function InventoryPage({ searchParams }: Props) {
   const page = Number(searchParams?.page) || 1;
-  const search = searchParams?.search || "";
-  const limit = 10;
+  const search =
+    typeof searchParams?.search === "string" ? searchParams.search : "";
 
+  const limit = 10;
   const { products, total } = await getProducts(page, limit, { search });
   const totalPages = Math.ceil(total / limit);
 

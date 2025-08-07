@@ -11,7 +11,7 @@ export const Socialicon = () => {
         className={`fixed bottom-5 right-6 z-50 animate-wiggle hover:animate-none`}
       >
         <button
-          className="p-3 rounded-full bg-yellow-600"
+          className="p-4 rounded-full bg-yellow-600"
           onClick={() => setEffect(!effect)}
         >
           <span className="hidden">Social button</span>
