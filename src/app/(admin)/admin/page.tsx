@@ -74,12 +74,14 @@ export default async function AdminPage() {
           )}
         </div>
 
-        <MetalRateForm
-          initialKarat24={rates?.karat24 ?? 0}
-          initialKarat22={rates?.karat22 ?? 0}
-          initialKarat18={rates?.karat18 ?? 0}
-          initialSilverRate={rates?.silverRate ?? 0}
-        />
+        <div className="grid grid-cols-2">
+          <MetalRateForm
+            initialKarat24={rates?.karat24 ?? 0}
+            initialKarat22={rates?.karat22 ?? 0}
+            initialKarat18={rates?.karat18 ?? 0}
+            initialSilverRate={rates?.silverRate ?? 0}
+          />
+        </div>
       </div>
     </main>
   );
