@@ -1,0 +1,12 @@
+-- CreateTable
+CREATE TABLE "public"."MetalRate" (
+    "id" TEXT NOT NULL,
+    "karat24" DOUBLE PRECISION NOT NULL,
+    "karat22" DOUBLE PRECISION NOT NULL,
+    "karat18" DOUBLE PRECISION NOT NULL,
+    "silverRate" DOUBLE PRECISION NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "MetalRate_pkey" PRIMARY KEY ("id")
+);
