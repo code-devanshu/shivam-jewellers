@@ -59,7 +59,7 @@ export default function ProductTable({ products }: Props) {
                 <td className="px-4 py-3">
                   <div className="w-16 h-16 rounded-lg overflow-hidden border border-neutral-200 bg-neutral-100 flex items-center justify-center">
                     <Image
-                      src={prod.images?.[0] || "/placeholder.png"}
+                      src={prod.images?.[0] || "/images/placeholder.webp"}
                       alt={prod.name}
                       width={64}
                       height={64}

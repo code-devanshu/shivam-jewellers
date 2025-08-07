@@ -13,6 +13,8 @@ export default function Breadcrumbs() {
     (_, i, arr) => "/admin/" + arr.slice(0, i + 1).join("/")
   );
 
+  if (pathname === "/admin") return <></>;
+
   return (
     <nav className="text-sm text-gray-500 flex items-center space-x-1">
       <Link href="/admin" className="hover:text-pink-600 font-medium">

@@ -11,22 +11,39 @@ export default function ProductImageGallery({
   images: string[];
   name: string;
 }) {
+  console.log("ProductImageGallery rendered with images:", images);
   const [selected, setSelected] = useState(0);
+  console.log("Selected image:", images[selected]);
   const [lightbox, setLightbox] = useState(false);
-
-  if (!images?.length) return null;
 
   const showPrev = () =>
     setSelected((s) => (s === 0 ? images.length - 1 : s - 1));
   const showNext = () =>
     setSelected((s) => (s === images.length - 1 ? 0 : s + 1));
 
+  console.log("Selected image:", images[selected]);
   return (
     <div>
       {/* Main Image with arrows and zoom */}
       <div className="relative w-full h-80 sm:h-96 md:h-[32rem] rounded-xl overflow-hidden bg-pink-50 group">
         <Image
-          src={images[selected] || "/placeholder.png"}
+          src={
+            images[selected] !== undefined
+              ? images[selected]
+              : "/images/placeholder.webp"
+          }
+          alt={`${name} image ${selected + 1}`}
+          fill
+          className="object-cover cursor-zoom-in transition group-hover:brightness-90"
+          sizes="(max-width: 768px) 100vw, 50vw"
+          onClick={() => setLightbox(true)}
+        />
+        <Image
+          src={
+            images[selected] !== undefined
+              ? images[selected]
+              : "/images/placeholder.webp"
+          }
           alt={`${name} image ${selected + 1}`}
           fill
           className="object-cover cursor-zoom-in transition group-hover:brightness-90"
@@ -108,7 +125,11 @@ export default function ProductImageGallery({
           </button>
           <div className="relative w-full max-w-3xl h-[60vw] max-h-[80vh] rounded-xl overflow-hidden bg-pink-50 flex items-center justify-center">
             <Image
-              src={images[selected]}
+              src={
+                images[selected] !== undefined
+                  ? images[selected]
+                  : "/images/placeholder.webp"
+              }
               alt={`${name} large image`}
               fill
               className="object-contain"

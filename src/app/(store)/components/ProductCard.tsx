@@ -21,7 +21,7 @@ export default function ProductCard({ product }: Props) {
         className="relative block w-full h-60 bg-gray-50"
       >
         <Image
-          src={product.images?.[0] || "/placeholder.png"}
+          src={product.images?.[0] || "/images/placeholder.webp"}
           alt={product.name}
           fill
           className="object-cover transition-transform duration-300 hover:scale-105"

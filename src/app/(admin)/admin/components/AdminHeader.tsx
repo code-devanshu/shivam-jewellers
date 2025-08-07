@@ -8,7 +8,6 @@ import { LogOut } from "lucide-react";
 const navLinks = [
   { label: "Dashboard", href: "/admin" },
   { label: "Inventory", href: "/admin/inventory" },
-  { label: "Add Product", href: "/admin/add-product" },
 ];
 
 export default function AdminHeader({
