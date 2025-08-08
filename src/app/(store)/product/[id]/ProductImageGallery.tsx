@@ -57,7 +57,7 @@ export default function ProductImageGallery({
             <button
               type="button"
               onClick={showPrev}
-              className="absolute top-1/2 left-2 -translate-y-1/2 bg-white/70 hover:bg-pink-100 text-pink-600 rounded-full shadow p-2"
+              className="absolute top-1/2 left-2 -translate-y-1/2 bg-white/70 bg-white hover:bg-pink-100 text-pink-600 rounded-full shadow p-2"
               aria-label="Previous image"
             >
               <ChevronLeft size={24} />
@@ -65,7 +65,7 @@ export default function ProductImageGallery({
             <button
               type="button"
               onClick={showNext}
-              className="absolute top-1/2 right-2 -translate-y-1/2 bg-white/70 hover:bg-pink-100 text-pink-600 rounded-full shadow p-2"
+              className="absolute top-1/2 right-2 -translate-y-1/2 bg-white/70 bg-white hover:bg-pink-100 text-pink-600 rounded-full shadow p-2"
               aria-label="Next image"
             >
               <ChevronRight size={24} />
@@ -144,7 +144,7 @@ export default function ProductImageGallery({
                     e.stopPropagation();
                     showPrev();
                   }}
-                  className="absolute top-1/2 left-4 -translate-y-1/2 bg-white/70 hover:bg-pink-100 text-pink-600 rounded-full shadow p-2"
+                  className="absolute top-1/2 left-4 -translate-y-1/2 bg-white/70 bg-white hover:bg-pink-100 text-pink-600 rounded-full shadow p-2"
                   aria-label="Previous image"
                 >
                   <ChevronLeft size={30} />
@@ -155,7 +155,7 @@ export default function ProductImageGallery({
                     e.stopPropagation();
                     showNext();
                   }}
-                  className="absolute top-1/2 right-4 -translate-y-1/2 bg-white/70 hover:bg-pink-100 text-pink-600 rounded-full shadow p-2"
+                  className="absolute top-1/2 right-4 -translate-y-1/2 bg-white/70 bg-white hover:bg-pink-100 text-pink-600 rounded-full shadow p-2"
                   aria-label="Next image"
                 >
                   <ChevronRight size={30} />

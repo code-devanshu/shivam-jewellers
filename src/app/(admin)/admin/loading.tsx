@@ -9,7 +9,7 @@ export default function Loading() {
           </div>
         </div>
         <p className="text-2xl font-medium text-center animate-pulse">
-          Fetching your inventory...
+          Setting up your dashboard ...
         </p>
       </div>
     </div>
