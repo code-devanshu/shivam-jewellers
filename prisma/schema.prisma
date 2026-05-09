@@ -1,0 +1,306 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum RateSource {
+  AUTO
+  MANUAL
+}
+
+enum MakingChargeType {
+  PERCENT
+  FIXED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  READY_FOR_PICKUP
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+// ─── Metal & Rates ────────────────────────────────────────────────────────────
+
+model Metal {
+  id        String      @id @default(cuid())
+  name      String      @unique // "Gold", "Silver", "Platinum"
+  symbol    String      @unique // "Au", "Ag", "Pt"
+  createdAt DateTime    @default(now())
+  products  Product[]
+  rates     MetalRate[]
+}
+
+// Snapshot of the rate per gram for a given day.
+// source = AUTO means fetched from external API; MANUAL means admin override.
+model MetalRate {
+  id           String     @id @default(cuid())
+  metalId      String
+  metal        Metal      @relation(fields: [metalId], references: [id])
+  ratePerGram  Decimal    @db.Decimal(10, 2) // INR per gram
+  source       RateSource
+  overriddenBy String? // Admin ID if manually set
+  effectiveAt  DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+
+  @@index([metalId, effectiveAt])
+}
+
+// ─── Categories ───────────────────────────────────────────────────────────────
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  imageUrl    String?
+  order       Int       @default(0)
+  showInNav   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+}
+
+// ─── Products ─────────────────────────────────────────────────────────────────
+
+model Product {
+  id               String           @id @default(cuid())
+  name             String
+  slug             String           @unique
+  description      String?
+  categoryId       String
+  category         Category         @relation(fields: [categoryId], references: [id])
+  metalId          String
+  metal            Metal            @relation(fields: [metalId], references: [id])
+  purity           String // "22K", "18K", "14K", "925", etc.
+  purityPercent    Decimal          @db.Decimal(5, 4) // 0.9167 for 22K gold
+  weightGrams      Decimal          @db.Decimal(8, 3) // Net weight
+  grossWeightGrams Decimal          @db.Decimal(8, 3) // Gross weight (with stones)
+  makingChargeType MakingChargeType
+  makingCharge     Decimal          @db.Decimal(10, 2) // % or fixed INR
+  gstPercent       Decimal          @default(3.0) @db.Decimal(5, 2) // 3% for gold, 3% for silver
+  isAvailable      Boolean          @default(true)
+  isFeatured       Boolean          @default(false)
+  stockQty         Int              @default(1)
+  images           ProductImage[]
+  variants         ProductVariant[]
+  cartItems        CartItem[]
+  wishlistItems    WishlistItem[]
+  orderItems       OrderItem[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([categoryId])
+  @@index([metalId])
+  @@index([slug])
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String // Cloudinary URL
+  publicId  String // Cloudinary public_id (for deletion)
+  isPrimary Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+}
+
+// Variants represent size/gemstone combinations for the same base product.
+model ProductVariant {
+  id              String     @id @default(cuid())
+  productId       String
+  product         Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size            String? // Ring size, chain length (cm), bangle size (mm), etc.
+  gemstone        String? // "Ruby", "Emerald", "Diamond", "None"
+  additionalPrice Decimal    @default(0) @db.Decimal(10, 2) // Added on top of base price
+  stockQty        Int        @default(0)
+  sku             String?    @unique
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+  createdAt       DateTime   @default(now())
+
+  @@index([productId])
+}
+
+// ─── Customers ────────────────────────────────────────────────────────────────
+
+// Mirrors Supabase auth.users — id is the Supabase UUID.
+model Customer {
+  id        String     @id // Supabase auth.users.id
+  phone     String?    @unique
+  name      String?
+  email     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  cart      Cart?
+  wishlist  Wishlist?
+  orders    Order[]
+  addresses Address[]
+}
+
+model Address {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  name       String
+  phone      String
+  line1      String
+  line2      String?
+  city       String
+  state      String
+  pincode    String
+  isDefault  Boolean  @default(false)
+  orders     Order[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([customerId])
+}
+
+// ─── Cart ─────────────────────────────────────────────────────────────────────
+
+model Cart {
+  id         String     @id @default(cuid())
+  customerId String     @unique
+  customer   Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items      CartItem[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String          @id @default(cuid())
+  cartId    String
+  cart      Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product         @relation(fields: [productId], references: [id])
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+  quantity  Int             @default(1)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@unique([cartId, productId, variantId])
+}
+
+// ─── Wishlist ─────────────────────────────────────────────────────────────────
+
+model Wishlist {
+  id         String         @id @default(cuid())
+  customerId String         @unique
+  customer   Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items      WishlistItem[]
+  createdAt  DateTime       @default(now())
+}
+
+model WishlistItem {
+  id         String   @id @default(cuid())
+  wishlistId String
+  wishlist   Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([wishlistId, productId])
+}
+
+// ─── Orders ───────────────────────────────────────────────────────────────────
+
+model Order {
+  id                 String               @id @default(cuid())
+  orderNumber        String               @unique // e.g. SJ-2025-00001
+  customerId         String
+  customer           Customer             @relation(fields: [customerId], references: [id])
+  addressId          String
+  address            Address              @relation(fields: [addressId], references: [id])
+  status             OrderStatus          @default(PENDING)
+  items              OrderItem[]
+  subtotal           Decimal              @db.Decimal(10, 2)
+  gstAmount          Decimal              @db.Decimal(10, 2)
+  totalAmount        Decimal              @db.Decimal(10, 2)
+  notes              String?
+  goldRateAtOrder    Decimal?             @db.Decimal(10, 2) // Snapshot of gold rate at order time
+  silverRateAtOrder  Decimal?             @db.Decimal(10, 2) // Snapshot of silver rate at order time
+  paymentStatus      PaymentStatus        @default(PENDING)
+  paymentMethod      String? // "RAZORPAY", "COD", "BANK_TRANSFER" (future)
+  paymentId          String? // Razorpay payment ID (future)
+  statusHistory      OrderStatusHistory[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@index([customerId])
+  @@index([status])
+}
+
+model OrderItem {
+  id          String          @id @default(cuid())
+  orderId     String
+  order       Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product         @relation(fields: [productId], references: [id])
+  variantId   String?
+  variant     ProductVariant? @relation(fields: [variantId], references: [id])
+  productName String // Snapshot at order time
+  metalName   String // Snapshot at order time
+  purity      String // Snapshot at order time
+  weightGrams Decimal         @db.Decimal(8, 3)
+  quantity    Int
+  unitPrice   Decimal         @db.Decimal(10, 2) // Calculated price at order time
+  totalPrice  Decimal         @db.Decimal(10, 2)
+  createdAt   DateTime        @default(now())
+
+  @@index([orderId])
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  note      String?
+  createdAt DateTime    @default(now())
+
+  @@index([orderId])
+}
+
+// ─── Inquiry ──────────────────────────────────────────────────────────────────
+
+model Inquiry {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  email     String?
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// ─── Admin ────────────────────────────────────────────────────────────────────
+
+// Admin accounts — separate from Customer. ID mirrors Supabase auth.users.id.
+model Admin {
+  id        String   @id // Supabase auth.users.id
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+}
