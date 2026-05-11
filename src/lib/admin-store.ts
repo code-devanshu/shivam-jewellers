@@ -1,3 +1,4 @@
+import { RateSource } from "@prisma/client";
 import { db } from "./db";
 import type { Product, Category } from "./types";
 
@@ -11,7 +12,9 @@ export async function storeGetAllProducts(): Promise<Product[]> {
   return rows.map(mapProduct);
 }
 
-export async function storeGetProductBySlug(slug: string): Promise<Product | null> {
+export async function storeGetProductBySlug(
+  slug: string,
+): Promise<Product | null> {
   const row = await db.product.findUnique({
     where: { slug },
     include: { category: true, metal: true, images: true, variants: true },
@@ -49,11 +52,26 @@ export async function storeAddProduct(product: Product): Promise<void> {
             })),
           }
         : undefined,
+      variants: product.variants.length
+        ? {
+            create: product.variants.map((v) => ({
+              id: v.id,
+              size: v.size,
+              gemstone: v.gemstone,
+              additionalPrice: v.additionalPrice,
+              stockQty: v.stockQty,
+              sku: v.sku,
+            })),
+          }
+        : undefined,
     },
   });
 }
 
-export async function storeUpdateProduct(id: string, updates: Partial<Product>): Promise<void> {
+export async function storeUpdateProduct(
+  id: string,
+  updates: Partial<Product>,
+): Promise<void> {
   const { images, variants, category, metal, ...scalar } = updates;
   await db.product.update({
     where: { id },
@@ -68,6 +86,19 @@ export async function storeUpdateProduct(id: string, updates: Partial<Product>):
             publicId: img.publicId,
             isPrimary: img.isPrimary,
             order: img.order,
+          })),
+        },
+      }),
+      ...(variants && {
+        variants: {
+          deleteMany: {},
+          create: variants.map((v) => ({
+            id: v.id,
+            size: v.size,
+            gemstone: v.gemstone,
+            additionalPrice: v.additionalPrice,
+            stockQty: v.stockQty,
+            sku: v.sku,
           })),
         },
       }),
@@ -100,7 +131,10 @@ export async function storeAddCategory(category: Category): Promise<void> {
   });
 }
 
-export async function storeUpdateCategory(id: string, updates: Partial<Category>): Promise<void> {
+export async function storeUpdateCategory(
+  id: string,
+  updates: Partial<Category>,
+): Promise<void> {
   await db.category.update({ where: { id }, data: updates });
 }
 
@@ -110,18 +144,43 @@ export async function storeDeleteCategory(id: string): Promise<void> {
 
 // ── Rate Overrides (still in-memory — DB rates via MetalRate table later) ────
 
-const _rateOverrides = new Map<string, { ratePerGram: number; setAt: string }>();
-
-export function storeSetRateOverride(metalId: string, ratePerGram: number): void {
-  _rateOverrides.set(metalId, { ratePerGram, setAt: new Date().toISOString() });
+export async function storeSetRateOverride(
+  metalId: string,
+  ratePerGram: number,
+): Promise<void> {
+  // Use upsert to handle both "create" and "update" scenarios
+  await db.metalRate.upsert({
+    where: { id: metalId },
+    update: {
+      ratePerGram,
+      source: RateSource.MANUAL,
+      effectiveAt: new Date(),
+    },
+    create: {
+      id: metalId, // Ensuring the ID matches if we create a new one
+      metal: { connect: { id: metalId } },
+      ratePerGram,
+      source: RateSource.MANUAL,
+      effectiveAt: new Date(),
+    },
+  });
 }
 
-export function storeGetRateOverride(metalId: string) {
-  return _rateOverrides.get(metalId);
+export async function storeGetRateOverride(metalId: string) {
+  const record = await db.metalRate.findFirst({
+    where: { metalId, source: RateSource.MANUAL },
+    orderBy: { effectiveAt: "desc" },
+  });
+
+  // Returns the record or null (does not throw if missing)
+  return record;
 }
 
-export function storeClearRateOverride(metalId: string): void {
-  _rateOverrides.delete(metalId);
+export async function storeClearRateOverride(metalId: string): Promise<void> {
+  // deleteMany is inherently safe; it won't throw if no records match
+  await db.metalRate.deleteMany({
+    where: { metalId, source: RateSource.MANUAL },
+  });
 }
 
 // ── Mappers ───────────────────────────────────────────────────────────────────
@@ -129,7 +188,29 @@ export function storeClearRateOverride(metalId: string): void {
 type DbProduct = Awaited<ReturnType<typeof db.product.findMany>>[number];
 type DbCategory = Awaited<ReturnType<typeof db.category.findMany>>[number];
 
-function mapProduct(row: DbProduct & { category: DbCategory; metal: { id: string; name: string; symbol: string }; images: { id: string; productId: string; url: string; publicId: string; isPrimary: boolean; order: number }[]; variants: { id: string; productId: string; size: string | null; gemstone: string | null; additionalPrice: unknown; stockQty: number; sku: string | null }[] }): Product {
+function mapProduct(
+  row: DbProduct & {
+    category: DbCategory;
+    metal: { id: string; name: string; symbol: string };
+    images: {
+      id: string;
+      productId: string;
+      url: string;
+      publicId: string;
+      isPrimary: boolean;
+      order: number;
+    }[];
+    variants: {
+      id: string;
+      productId: string;
+      size: string | null;
+      gemstone: string | null;
+      additionalPrice: unknown;
+      stockQty: number;
+      sku: string | null;
+    }[];
+  },
+): Product {
   return {
     id: row.id,
     name: row.name,

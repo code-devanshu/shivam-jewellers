@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { X, Check, Loader2, ImageOff, ChevronDown } from "lucide-react";
-import { listProductImages, type CloudinaryImage } from "@/app/admin/products/list-images-action";
+import { listProductImages, type CloudinaryImage } from "@/app/admin/(protected)/products/list-images-action";
 
 type Props = {
   currentUrl: string;

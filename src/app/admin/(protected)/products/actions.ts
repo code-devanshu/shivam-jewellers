@@ -35,7 +35,8 @@ export async function createProduct(
   const makingCharge = parseFloat(formData.get("makingCharge") as string);
   const gstPercent = parseFloat(formData.get("gstPercent") as string) || 3;
   const description = (formData.get("description") as string)?.trim() || null;
-  const imageUrl = (formData.get("imageUrl") as string)?.trim();
+  const imageUrls = (formData.getAll("images[]") as string[]).filter(Boolean);
+  const sizeValues = (formData.getAll("sizes[]") as string[]).filter(Boolean);
   const stockQty = parseInt(formData.get("stockQty") as string) || 0;
   const isAvailable = formData.get("isAvailable") === "on";
   const isFeatured = formData.get("isFeatured") === "on";
@@ -52,8 +53,9 @@ export async function createProduct(
     return { status: "error", message: "Invalid category or metal." };
   }
 
+  const ts = Date.now();
   await storeAddProduct({
-    id: `product-${Date.now()}`,
+    id: `product-${ts}`,
     name,
     slug,
     description,
@@ -71,10 +73,23 @@ export async function createProduct(
     isAvailable,
     isFeatured,
     stockQty,
-    images: imageUrl
-      ? [{ id: `img-${Date.now()}`, productId: "", url: imageUrl, publicId: "", isPrimary: true, order: 0 }]
-      : [],
-    variants: [],
+    images: imageUrls.map((url, i) => ({
+      id: `img-${ts}-${i}`,
+      productId: "",
+      url,
+      publicId: "",
+      isPrimary: i === 0,
+      order: i,
+    })),
+    variants: sizeValues.map((size, i) => ({
+      id: `var-${ts}-${i}`,
+      productId: "",
+      size,
+      gemstone: null,
+      additionalPrice: 0,
+      stockQty: 1,
+      sku: null,
+    })),
   });
 
   revalidateTag("products", "max");
@@ -102,7 +117,8 @@ export async function updateProduct(
   const makingCharge = parseFloat(formData.get("makingCharge") as string);
   const gstPercent = parseFloat(formData.get("gstPercent") as string) || 3;
   const description = (formData.get("description") as string)?.trim() || null;
-  const imageUrl = (formData.get("imageUrl") as string)?.trim();
+  const imageUrls = (formData.getAll("images[]") as string[]).filter(Boolean);
+  const sizeValues = (formData.getAll("sizes[]") as string[]).filter(Boolean);
   const stockQty = parseInt(formData.get("stockQty") as string) || 0;
   const isAvailable = formData.get("isAvailable") === "on";
   const isFeatured = formData.get("isFeatured") === "on";
@@ -119,13 +135,28 @@ export async function updateProduct(
     return { status: "error", message: "Invalid category or metal." };
   }
 
+  const ts = Date.now();
   await storeUpdateProduct(id, {
     name, slug, description, categoryId, category, metalId, metal, purity, purityPercent,
     weightGrams, grossWeightGrams: grossWeightGrams || weightGrams, makingChargeType,
     makingCharge, gstPercent, isAvailable, isFeatured, stockQty,
-    ...(imageUrl && {
-      images: [{ id: `img-${Date.now()}`, productId: id, url: imageUrl, publicId: "", isPrimary: true, order: 0 }],
-    }),
+    images: imageUrls.map((url, i) => ({
+      id: `img-${ts}-${i}`,
+      productId: id,
+      url,
+      publicId: "",
+      isPrimary: i === 0,
+      order: i,
+    })),
+    variants: sizeValues.map((size, i) => ({
+      id: `var-${ts}-${i}`,
+      productId: id,
+      size,
+      gemstone: null,
+      additionalPrice: 0,
+      stockQty: 1,
+      sku: null,
+    })),
   });
 
   revalidateTag("products", "max");

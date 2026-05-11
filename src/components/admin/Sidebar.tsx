@@ -8,6 +8,8 @@ import {
   LogOut,
   MessageSquare,
   Package,
+  Receipt,
+  ShoppingBag,
   Tag,
   TrendingUp,
 } from "lucide-react";
@@ -15,6 +17,8 @@ import { adminLogout } from "@/app/admin/login/actions";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+  { href: "/admin/billing", label: "Billing", icon: Receipt },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/rates", label: "Metal Rates", icon: TrendingUp },
   { href: "/admin/categories", label: "Categories", icon: Tag },

@@ -1,7 +1,17 @@
 import { MapPin, MessageCircle, Phone } from "lucide-react";
 import ContactForm from "@/components/store/ContactForm";
 
-export const metadata = { title: "Contact Us" };
+export const metadata = {
+  title: "Contact Us",
+  description:
+    "Get in touch with Shivam Jewellers in Deoria, UP. Visit our store, call us, or chat on WhatsApp for custom jewellery orders and enquiries.",
+  openGraph: {
+    title: "Contact Shivam Jewellers",
+    description:
+      "Reach us at our store in Deoria, UP — call, WhatsApp, or fill out the enquiry form.",
+    url: "/contact",
+  },
+};
 
 const WHATSAPP_NUMBER = "+918808011114"; // TODO: replace with real number
 const STORE_PHONE = "+91 88080 11114"; // TODO: replace with real number

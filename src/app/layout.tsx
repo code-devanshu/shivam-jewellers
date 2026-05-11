@@ -12,9 +12,33 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: { default: "Shivam Jewellers", template: "%s | Shivam Jewellers" },
-  description: "BIS Hallmark certified gold and silver jewellery. Handcrafted pieces for every occasion.",
+  description:
+    "BIS Hallmark certified gold and silver jewellery handcrafted in Deoria, UP. Shop rings, necklaces, bangles, earrings and more. 30+ years of trusted craftsmanship.",
+  keywords: [
+    "gold jewellery",
+    "silver jewellery",
+    "BIS hallmark",
+    "jewellery Deoria",
+    "gold rings",
+    "silver bangles",
+    "handcrafted jewellery",
+    "Shivam Jewellers",
+  ],
+  authors: [{ name: "Shivam Jewellers" }],
+  openGraph: {
+    type: "website",
+    siteName: "Shivam Jewellers",
+    locale: "en_IN",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({

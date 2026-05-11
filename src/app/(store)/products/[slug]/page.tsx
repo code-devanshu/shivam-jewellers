@@ -10,9 +10,29 @@ export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
   if (!product) return {};
+
+  const description =
+    product.description ??
+    `Shop ${product.name} at Shivam Jewellers. BIS Hallmark certified handcrafted jewellery.`;
+
+  const ogImage = product.images?.[0]?.url;
+
   return {
     title: product.name,
-    description: product.description ?? undefined,
+    description,
+    openGraph: {
+      title: `${product.name} | Shivam Jewellers`,
+      description,
+      url: `/products/${slug}`,
+      type: "website",
+      ...(ogImage ? { images: [{ url: ogImage, alt: product.name }] } : {}),
+    },
+    twitter: {
+      card: ogImage ? "summary_large_image" : "summary",
+      title: product.name,
+      description,
+      ...(ogImage ? { images: [ogImage] } : {}),
+    },
   };
 }
 

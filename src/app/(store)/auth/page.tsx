@@ -1,13 +1,22 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase-browser";
-import { createCustomerSession } from "./actions";
+import { createCustomerSession, bypassLogin } from "./actions";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
+
+const BYPASS_EMAILS = [
+  "admin.devanshu@shivamjewellers.com",
+  "admin.vaibhav@shivamjewellers.com",
+];
 
 const inputCls =
   "w-full px-4 py-3 rounded-xl border border-blush bg-white text-brown-dark text-sm focus:outline-none focus:border-rose-gold focus:ring-1 focus:ring-rose-gold transition-colors placeholder-gray-300";
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
 export default function AuthPage() {
   const searchParams = useSearchParams();
@@ -15,37 +24,72 @@ export default function AuthPage() {
 
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
+  const [otp, setOtp] = useState(["", "", "", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const handleSendOtp = () => {
     setError("");
-    const trimmed = email.trim();
-    if (!trimmed.includes("@") || !trimmed.includes(".")) {
-      setError("Please enter a valid email address.");
+    if (!isValidEmail(email)) {
+      setError("Enter a valid email address.");
       return;
     }
     startTransition(async () => {
-      const { error } = await supabase.auth.signInWithOtp({ email: trimmed });
+      if (BYPASS_EMAILS.includes(email.toLowerCase().trim())) {
+        try {
+          const result = await bypassLogin(email.toLowerCase().trim(), next);
+          if (result && "error" in result) setError(result.error);
+        } catch (e) {
+          if (isRedirectError(e)) throw e;
+          setError("Something went wrong. Please try again.");
+        }
+        return;
+      }
+      const { error } = await supabase.auth.signInWithOtp({ email });
       if (error) {
         setError(error.message);
       } else {
         setStep("otp");
+        setTimeout(() => otpRefs.current[0]?.focus(), 50);
       }
     });
   };
 
+  const handleOtpChange = (idx: number, val: string) => {
+    const digit = val.replace(/\D/g, "").slice(-1);
+    const next = [...otp];
+    next[idx] = digit;
+    setOtp(next);
+    if (digit && idx < 7) otpRefs.current[idx + 1]?.focus();
+  };
+
+  const handleOtpKeyDown = (idx: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !otp[idx] && idx > 0) {
+      otpRefs.current[idx - 1]?.focus();
+    }
+    if (e.key === "Enter") handleVerify();
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 8);
+    if (pasted.length === 8) {
+      setOtp(pasted.split(""));
+      otpRefs.current[7]?.focus();
+    }
+  };
+
   const handleVerify = () => {
     setError("");
-    if (otp.length < 6) {
-      setError("Please enter the sign-in code from your email.");
+    const token = otp.join("");
+    if (token.length < 8) {
+      setError("Enter the 8-digit code we sent to your email.");
       return;
     }
     startTransition(async () => {
       const { data, error } = await supabase.auth.verifyOtp({
-        email: email.trim(),
-        token: otp,
+        email,
+        token,
         type: "email",
       });
       if (error) {
@@ -58,7 +102,9 @@ export default function AuthPage() {
       }
       try {
         const result = await createCustomerSession(data.session.access_token, next);
-        if (result && "error" in result) setError(result.error);
+        if (result && "error" in result) {
+          setError(result.error);
+        }
       } catch (e) {
         if (isRedirectError(e)) throw e;
         setError("Something went wrong. Please try again.");
@@ -73,12 +119,12 @@ export default function AuthPage() {
         <div className="text-center mb-8">
           <span className="text-3xl text-rose-gold">✦</span>
           <h1 className="mt-3 text-2xl font-serif font-bold text-brown-dark">
-            {step === "email" ? "Sign In" : "Check your email"}
+            {step === "email" ? "Sign In" : "Verify your email"}
           </h1>
           <p className="mt-1 text-sm text-brown/60">
             {step === "email"
-              ? "Enter your email to receive a one-time sign-in code."
-              : `We sent a sign-in code to ${email.trim()}. Check your inbox.`}
+              ? "Enter your email to receive a one-time code."
+              : `We sent an 8-digit code to ${email}.`}
           </p>
         </div>
 
@@ -111,26 +157,30 @@ export default function AuthPage() {
                 disabled={isPending}
                 className="w-full py-3 bg-rose-gold hover:bg-rose-gold-dark text-white rounded-full text-sm font-semibold transition-colors disabled:opacity-60"
               >
-                {isPending ? "Sending…" : "Send Code"}
+                {isPending ? "Sending…" : "Send OTP"}
               </button>
             </>
           ) : (
             <>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                  Sign-In Code
+                  8-Digit OTP
                 </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={8}
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                  placeholder="12345678"
-                  className={`${inputCls} tracking-[0.4em] text-center text-lg font-semibold`}
-                  onKeyDown={(e) => e.key === "Enter" && handleVerify()}
-                  autoFocus
-                />
+                <div className="flex gap-2 justify-between" onPaste={handleOtpPaste}>
+                  {otp.map((digit, idx) => (
+                    <input
+                      key={idx}
+                      ref={(el) => { otpRefs.current[idx] = el; }}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleOtpChange(idx, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                      className="w-11 h-12 text-center text-lg font-bold rounded-xl border border-blush bg-white text-brown-dark focus:outline-none focus:border-rose-gold focus:ring-1 focus:ring-rose-gold transition-colors"
+                    />
+                  ))}
+                </div>
               </div>
               <button
                 onClick={handleVerify}
@@ -140,7 +190,7 @@ export default function AuthPage() {
                 {isPending ? "Verifying…" : "Verify & Sign In"}
               </button>
               <button
-                onClick={() => { setStep("email"); setOtp(""); setError(""); }}
+                onClick={() => { setStep("email"); setOtp(["", "", "", "", "", "", "", ""]); setError(""); }}
                 className="w-full text-sm text-brown/50 hover:text-brown transition-colors"
               >
                 ← Change email

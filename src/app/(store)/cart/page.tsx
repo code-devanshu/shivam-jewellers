@@ -5,7 +5,7 @@ import { getCartItems } from "@/lib/customer-store";
 import { getAllProducts, getCurrentRates } from "@/lib/data";
 import CartClient from "./CartClient";
 
-export const metadata = { title: "Cart" };
+export const metadata = { title: "Cart", robots: { index: false, follow: false } };
 
 export default async function CartPage() {
   const customerId = await getCustomerSession();

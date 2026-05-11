@@ -9,10 +9,11 @@ import { signOutCustomer } from "@/app/(store)/auth/actions";
 type Props = {
   categories: Category[];
   cartCount: number;
+  wishlistCount: number;
   isLoggedIn: boolean;
 };
 
-export default function Navbar({ categories, cartCount, isLoggedIn }: Props) {
+export default function Navbar({ categories, cartCount, wishlistCount, isLoggedIn }: Props) {
   const [open, setOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
 
@@ -59,10 +60,15 @@ export default function Navbar({ categories, cartCount, isLoggedIn }: Props) {
           <div className="flex items-center gap-1">
             <Link
               href="/wishlist"
-              className="p-2 text-brown hover:text-rose-gold transition-colors"
+              className="relative p-2 text-brown hover:text-rose-gold transition-colors"
               aria-label="Wishlist"
             >
               <Heart size={20} />
+              {wishlistCount > 0 && (
+                <span className="absolute top-0.5 right-0.5 min-w-4 h-4 bg-rose-gold text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
+                  {wishlistCount > 9 ? "9+" : wishlistCount}
+                </span>
+              )}
             </Link>
 
             {/* Cart with badge */}
@@ -90,7 +96,14 @@ export default function Navbar({ categories, cartCount, isLoggedIn }: Props) {
                   <User size={20} />
                 </button>
                 {accountOpen && (
-                  <div className="absolute right-0 top-full mt-1 bg-white border border-blush rounded-xl shadow-lg py-1 min-w-35 z-50">
+                  <div className="absolute right-0 top-full mt-1 bg-white border border-blush rounded-xl shadow-lg py-1 min-w-36 z-50">
+                    <Link
+                      href="/orders"
+                      className="block px-4 py-2 text-sm text-brown hover:text-rose-gold hover:bg-blush/40 transition-colors"
+                      onClick={() => setAccountOpen(false)}
+                    >
+                      My Orders
+                    </Link>
                     <form action={signOutCustomer}>
                       <button
                         type="submit"
@@ -137,14 +150,23 @@ export default function Navbar({ categories, cartCount, isLoggedIn }: Props) {
           ))}
           <div className="pt-2 border-t border-blush mt-2">
             {isLoggedIn ? (
-              <form action={signOutCustomer}>
-                <button
-                  type="submit"
-                  className="block w-full text-left py-2 text-sm font-medium text-brown hover:text-rose-gold transition-colors"
+              <>
+                <Link
+                  href="/orders"
+                  className="block py-2 text-sm font-medium text-brown hover:text-rose-gold transition-colors"
+                  onClick={() => setOpen(false)}
                 >
-                  Sign Out
-                </button>
-              </form>
+                  My Orders
+                </Link>
+                <form action={signOutCustomer}>
+                  <button
+                    type="submit"
+                    className="block w-full text-left py-2 text-sm font-medium text-brown hover:text-rose-gold transition-colors"
+                  >
+                    Sign Out
+                  </button>
+                </form>
+              </>
             ) : (
               <Link
                 href="/auth"

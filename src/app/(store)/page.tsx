@@ -1,15 +1,34 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Handcrafted Gold & Silver Jewellery",
+  description:
+    "Shop BIS Hallmark certified gold and silver jewellery handcrafted in Deoria, UP. Rings, necklaces, bangles, earrings and more — 30+ years of trusted craftsmanship.",
+  openGraph: {
+    title: "Shivam Jewellers — Handcrafted Gold & Silver Jewellery",
+    description:
+      "BIS Hallmark certified jewellery. Shop rings, necklaces, bangles and more from Shivam Jewellers, Deoria.",
+    url: "/",
+    type: "website",
+  },
+};
 import { ArrowRight, ShieldCheck, Star, Truck } from "lucide-react";
 import { getCategories, getProducts, getCurrentRates } from "@/lib/data";
+import { getCustomerSession } from "@/lib/customer-auth";
+import { getWishlistedProductIds } from "@/lib/customer-store";
 import ProductCard from "@/components/store/ProductCard";
 import CategoryCard from "@/components/store/CategoryCard";
 import HeroSection from "@/components/store/HeroSection";
 
 export default async function HomePage() {
-  const [categories, featured, rates] = await Promise.all([
+  const customerId = await getCustomerSession();
+
+  const [categories, featured, rates, wishlistedIds] = await Promise.all([
     getCategories(),
     getProducts({ featured: true }),
     getCurrentRates(),
+    customerId ? getWishlistedProductIds(customerId) : Promise.resolve([]),
   ]);
 
   const rateMap = Object.fromEntries(rates.map((r) => [r.metalId, r.ratePerGram]));
@@ -73,6 +92,7 @@ export default async function HomePage() {
                 key={product.id}
                 product={product}
                 ratePerGram={rateMap[product.metalId] ?? 0}
+                isWishlisted={wishlistedIds.includes(product.id)}
               />
             ))}
           </div>

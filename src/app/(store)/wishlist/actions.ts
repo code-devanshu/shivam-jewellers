@@ -10,6 +10,7 @@ export async function toggleWishlist(productId: string): Promise<boolean> {
   if (!customerId) redirect("/auth");
   const newState = await toggleWishlistItem(customerId, productId);
   revalidatePath("/wishlist");
+  revalidatePath("/", "layout");
   return newState;
 }
 

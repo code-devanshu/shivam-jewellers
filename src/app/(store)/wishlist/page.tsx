@@ -5,7 +5,7 @@ import { getWishlistItems } from "@/lib/customer-store";
 import { getAllProducts, getCurrentRates } from "@/lib/data";
 import WishlistClient from "./WishlistClient";
 
-export const metadata = { title: "Wishlist" };
+export const metadata = { title: "Wishlist", robots: { index: false, follow: false } };
 
 export default async function WishlistPage() {
   const customerId = await getCustomerSession();

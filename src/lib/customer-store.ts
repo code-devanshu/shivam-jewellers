@@ -72,6 +72,14 @@ export async function deleteCartItem(customerId: string, itemId: string): Promis
 
 // ── Wishlist ──────────────────────────────────────────────────────────────────
 
+export async function getWishlistItemCount(customerId: string): Promise<number> {
+  const wishlist = await db.wishlist.findUnique({
+    where: { customerId },
+    include: { items: { select: { id: true } } },
+  });
+  return wishlist?.items.length ?? 0;
+}
+
 export async function getWishlistedProductIds(customerId: string): Promise<string[]> {
   const wishlist = await db.wishlist.findUnique({
     where: { customerId },

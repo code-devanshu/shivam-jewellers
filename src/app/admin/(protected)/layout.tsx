@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import Sidebar from "@/components/admin/Sidebar";
 import { Toaster } from "sonner";
 
-export const metadata: Metadata = { title: { default: "Admin", template: "%s | Admin" } };
+export const metadata: Metadata = {
+  title: { default: "Admin", template: "%s | Admin" },
+  robots: { index: false, follow: false },
+};
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
@@ -12,7 +16,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const isAuthenticated = verifyAdminSession(session);
 
   if (!isAuthenticated) {
-    return <>{children}</>;
+    redirect("/admin/login");
   }
 
   return (

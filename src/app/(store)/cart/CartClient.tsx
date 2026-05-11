@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useTransition } from "react";
+import { ArrowRight } from "lucide-react";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import type { Product, ProductVariant } from "@/lib/types";
 import { calculatePrice, formatPrice } from "@/lib/price";
@@ -179,14 +180,12 @@ export default function CartClient({ items, rates }: Props) {
           <p className="text-xs text-brown/40 leading-relaxed">
             Prices are calculated at today's live metal rate and may vary slightly at checkout.
           </p>
-          <button
-            disabled
-            className="w-full py-3 bg-rose-gold/40 text-white rounded-full text-sm font-semibold cursor-not-allowed"
-            title="Coming soon"
+          <Link
+            href="/checkout"
+            className="w-full py-3 bg-rose-gold hover:bg-rose-gold-dark text-white rounded-full text-sm font-semibold transition flex items-center justify-center gap-2"
           >
-            Proceed to Checkout
-          </button>
-          <p className="text-center text-xs text-brown/40">Checkout coming soon</p>
+            Proceed to Checkout <ArrowRight size={15} />
+          </Link>
         </div>
       </div>
     </div>

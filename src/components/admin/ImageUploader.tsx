@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { ImagePlus, Loader2, X, AlertCircle, Library } from "lucide-react";
-import { uploadProductImage } from "@/app/admin/products/upload-image-action";
+import { uploadProductImage } from "@/app/admin/(protected)/products/upload-image-action";
 import MediaPicker from "@/components/admin/MediaPicker";
 
 type Props = {

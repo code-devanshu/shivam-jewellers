@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { getCategories, getMetals, getProducts, getCurrentRates } from "@/lib/data";
+import { getCustomerSession } from "@/lib/customer-auth";
+import { getWishlistedProductIds } from "@/lib/customer-store";
 import ProductCard from "@/components/store/ProductCard";
 
 type SearchParams = {
@@ -16,16 +18,31 @@ type Props = {
 
 export async function generateMetadata({ searchParams }: Props) {
   const params = await searchParams;
-  const title = params.category
+  const categoryName = params.category
     ? params.category.charAt(0).toUpperCase() + params.category.slice(1)
-    : "All Jewellery";
-  return { title };
+    : null;
+
+  const title = params.q
+    ? `Search: "${params.q}"`
+    : categoryName ?? "All Jewellery";
+
+  const description = categoryName
+    ? `Shop handcrafted ${categoryName.toLowerCase()} at Shivam Jewellers. BIS Hallmark certified gold and silver pieces.`
+    : "Browse our full collection of BIS Hallmark certified gold and silver jewellery — rings, necklaces, bangles, earrings and more.";
+
+  return {
+    title,
+    description,
+    openGraph: { title: `${title} | Shivam Jewellers`, description, url: "/products" },
+  };
 }
 
 export default async function ProductsPage({ searchParams }: Props) {
   const params = await searchParams;
 
-  const [categories, metals, rates, products] = await Promise.all([
+  const customerId = await getCustomerSession();
+
+  const [categories, metals, rates, products, wishlistedIds] = await Promise.all([
     getCategories(),
     getMetals(),
     getCurrentRates(),
@@ -35,6 +52,7 @@ export default async function ProductsPage({ searchParams }: Props) {
       featured: params.featured === "true",
       query: params.q,
     }),
+    customerId ? getWishlistedProductIds(customerId) : Promise.resolve([]),
   ]);
 
   const rateMap = Object.fromEntries(rates.map((r) => [r.metalId, r.ratePerGram]));
@@ -204,6 +222,7 @@ export default async function ProductsPage({ searchParams }: Props) {
                   key={product.id}
                   product={product}
                   ratePerGram={rateMap[product.metalId] ?? 0}
+                  isWishlisted={wishlistedIds.includes(product.id)}
                 />
               ))}
             </div>

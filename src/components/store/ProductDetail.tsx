@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -10,9 +9,12 @@ import {
   Heart,
   Shield,
   ShoppingBag,
+  Zap,
 } from "lucide-react";
+import ProductImageGallery from "@/components/store/ProductImageGallery";
 import type { Product, ProductVariant } from "@/lib/types";
 import { calculatePrice, formatPrice } from "@/lib/price";
+import { toast } from "sonner";
 import { addToCart } from "@/app/(store)/cart/actions";
 import { toggleWishlist } from "@/app/(store)/wishlist/actions";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
@@ -36,13 +38,14 @@ export default function ProductDetail({
   );
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [cartState, setCartState] = useState<"idle" | "adding" | "added">("idle");
+  const [buyState, setBuyState] = useState<"idle" | "pending">("idle");
   const [wishlisted, setWishlisted] = useState(initialWishlisted);
   const [, startCartTransition] = useTransition();
+  const [, startBuyTransition] = useTransition();
   const [, startWishlistTransition] = useTransition();
 
   const additionalPrice = selectedVariant?.additionalPrice ?? 0;
   const breakdown = calculatePrice(product, ratePerGram, additionalPrice);
-  const primary = product.images.find((i) => i.isPrimary) ?? product.images[0];
 
   const sizes = [
     ...new Set(
@@ -73,17 +76,38 @@ export default function ProductDetail({
     });
   };
 
+  const handleBuyNow = () => {
+    if (!customerId) {
+      router.push(`/auth?next=/products/${product.slug}`);
+      return;
+    }
+    setBuyState("pending");
+    startBuyTransition(async () => {
+      try {
+        await addToCart(product.id, selectedVariant?.id ?? null);
+        router.push("/cart");
+      } catch (e) {
+        if (isRedirectError(e)) throw e;
+        setBuyState("idle");
+      }
+    });
+  };
+
   const handleToggleWishlist = () => {
     if (!customerId) {
       router.push(`/auth?next=/products/${product.slug}`);
       return;
     }
+    const next = !wishlisted;
+    setWishlisted(next);
     startWishlistTransition(async () => {
       try {
-        const newState = await toggleWishlist(product.id);
-        setWishlisted(newState);
+        const confirmed = await toggleWishlist(product.id);
+        setWishlisted(confirmed);
+        toast.success(confirmed ? "Added to wishlist" : "Removed from wishlist");
       } catch (e) {
         if (isRedirectError(e)) throw e;
+        setWishlisted(!next);
       }
     });
   };
@@ -116,22 +140,12 @@ export default function ProductDetail({
       </nav>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14">
-        {/* ── Image ────────────────────────────────────────────────────── */}
-        <div className="relative aspect-square rounded-3xl overflow-hidden bg-blush/40 border border-blush shadow-sm">
-          {primary ? (
-            <Image
-              src={primary.url}
-              alt={product.name}
-              fill
-              className="object-cover"
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              priority
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-8xl text-rose-gold-light">
-              ✦
-            </div>
-          )}
+        {/* ── Image Gallery ─────────────────────────────────────────── */}
+        <div>
+          <ProductImageGallery
+            images={product.images}
+            productName={product.name}
+          />
         </div>
 
         {/* ── Info ─────────────────────────────────────────────────────── */}
@@ -286,36 +300,47 @@ export default function ProductDetail({
           )}
 
           {/* CTA buttons */}
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3">
+            {/* Buy Now — primary */}
             <button
-              onClick={handleAddToCart}
-              disabled={cartState === "adding"}
-              className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-semibold transition-all ${
-                cartState === "added"
-                  ? "bg-green-500 text-white scale-95"
-                  : "bg-rose-gold hover:bg-rose-gold-dark text-white disabled:opacity-60"
-              }`}
+              onClick={handleBuyNow}
+              disabled={buyState === "pending"}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-semibold bg-brown-dark hover:bg-brown text-white disabled:opacity-60 transition-all"
             >
-              <ShoppingBag size={18} />
-              {cartState === "adding"
-                ? "Adding…"
-                : cartState === "added"
-                ? "Added!"
-                : customerId
-                ? "Add to Cart"
-                : "Sign In to Add"}
+              <Zap size={17} />
+              {buyState === "pending" ? "Please wait…" : "Buy Now"}
             </button>
-            <button
-              onClick={handleToggleWishlist}
-              className={`p-3.5 rounded-full border transition-all ${
-                wishlisted
-                  ? "bg-rose-gold border-rose-gold text-white"
-                  : "border-blush text-rose-gold hover:bg-blush"
-              }`}
-              aria-label="Toggle wishlist"
-            >
-              <Heart size={20} fill={wishlisted ? "currentColor" : "none"} />
-            </button>
+
+            {/* Add to Cart + Wishlist */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleAddToCart}
+                disabled={cartState === "adding"}
+                className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-semibold border-2 transition-all ${
+                  cartState === "added"
+                    ? "border-green-500 bg-green-500 text-white"
+                    : "border-rose-gold text-rose-gold hover:bg-rose-gold hover:text-white disabled:opacity-60"
+                }`}
+              >
+                <ShoppingBag size={17} />
+                {cartState === "adding"
+                  ? "Adding…"
+                  : cartState === "added"
+                  ? "Added to Cart!"
+                  : "Add to Cart"}
+              </button>
+              <button
+                onClick={handleToggleWishlist}
+                className={`p-3.5 rounded-full border-2 transition-all ${
+                  wishlisted
+                    ? "bg-rose-gold border-rose-gold text-white"
+                    : "border-blush text-rose-gold hover:bg-blush"
+                }`}
+                aria-label="Toggle wishlist"
+              >
+                <Heart size={20} fill={wishlisted ? "currentColor" : "none"} />
+              </button>
+            </div>
           </div>
 
           {/* Description */}
