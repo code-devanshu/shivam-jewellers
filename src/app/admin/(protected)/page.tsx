@@ -11,23 +11,18 @@ import {
   MessageSquare,
   IndianRupee,
   Wallet,
-  Clock,
   BarChart3,
   Truck,
   CheckCircle2,
   CircleDot,
 } from "lucide-react";
-import { storeGetAllProducts, storeGetAllCategories } from "@/lib/admin-store";
-import { getLiveRates } from "@/lib/live-rates";
+import { unstable_cache } from "next/cache";
+import { getAllProducts, getCategories, getCurrentRates } from "@/lib/data";
 import { formatPrice } from "@/lib/price";
 import { db } from "@/lib/db";
 import { RevenueBarChart, RevenueSplitDonut, type ChartDay } from "./DashboardCharts";
 
 export const metadata = { title: "Dashboard" };
-
-function dayKey(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -120,119 +115,197 @@ const ORDER_STATUS_META: Record<
   CANCELLED:        { label: "Cancelled",         color: "text-red-500",    bg: "bg-red-50" },
 };
 
+const getDashboardStats = unstable_cache(
+  async () => {
+    const cacheNow = new Date();
+    const thirtyDaysAgo = new Date(cacheNow.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(cacheNow.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const [
+      allOrderAgg,
+      allBillAgg,
+      chartOrders,
+      chartBills,
+      monthOrders,
+      monthBills,
+      displayOrders,
+      displayBills,
+      customerCount,
+      unreadInquiries,
+      orderStatusCounts,
+    ] = await Promise.all([
+      db.order.aggregate({
+        _sum: { totalAmount: true },
+        _count: { id: true },
+        where: { status: { notIn: ["PENDING_PAYMENT", "CANCELLED"] } },
+      }),
+      db.bill.aggregate({
+        _sum: { amountPaid: true, balanceDue: true },
+        _count: { id: true },
+      }),
+      db.order.findMany({
+        where: {
+          createdAt: { gte: sevenDaysAgo },
+          status: { notIn: ["PENDING_PAYMENT", "CANCELLED"] },
+        },
+        select: { totalAmount: true, createdAt: true },
+      }),
+      db.bill.findMany({
+        where: { createdAt: { gte: sevenDaysAgo } },
+        select: { amountPaid: true, createdAt: true },
+      }),
+      db.order.findMany({
+        where: {
+          createdAt: { gte: thirtyDaysAgo },
+          status: { notIn: ["PENDING_PAYMENT", "CANCELLED"] },
+        },
+        select: { totalAmount: true },
+      }),
+      db.bill.findMany({
+        where: { createdAt: { gte: thirtyDaysAgo } },
+        select: { amountPaid: true },
+      }),
+      db.order.findMany({
+        where: { status: { notIn: ["PENDING_PAYMENT", "CANCELLED"] } },
+        select: {
+          id: true,
+          orderNumber: true,
+          totalAmount: true,
+          status: true,
+          deliveryType: true,
+          createdAt: true,
+          customer: { select: { name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      }),
+      db.bill.findMany({
+        select: {
+          id: true,
+          billNumber: true,
+          amountPaid: true,
+          balanceDue: true,
+          status: true,
+          createdAt: true,
+          customerName: true,
+          customer: { select: { name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      }),
+      db.customer.count(),
+      db.inquiry.count({ where: { isRead: false } }),
+      db.order.groupBy({
+        by: ["status"],
+        _count: { id: true },
+        where: { status: { notIn: ["PENDING_PAYMENT"] } },
+      }),
+    ]);
+
+    const totalOrderRevenue = Number(allOrderAgg._sum.totalAmount ?? 0);
+    const totalBillCollected = Number(allBillAgg._sum.amountPaid ?? 0);
+    const totalOutstanding = Number(allBillAgg._sum.balanceDue ?? 0);
+    const totalRevenue = totalOrderRevenue + totalBillCollected;
+    const orderCount = allOrderAgg._count.id ?? 0;
+    const billCount = allBillAgg._count.id ?? 0;
+    const totalSales = orderCount + billCount;
+
+    const thisMonthRevenue =
+      monthOrders.reduce((s, o) => s + Number(o.totalAmount), 0) +
+      monthBills.reduce((s, b) => s + Number(b.amountPaid), 0);
+
+    const ordersMap = new Map<string, number>();
+    const billsMap = new Map<string, number>();
+    for (const o of chartOrders) {
+      const k = (o.createdAt as Date).toISOString().slice(0, 10);
+      ordersMap.set(k, (ordersMap.get(k) ?? 0) + Number(o.totalAmount));
+    }
+    for (const b of chartBills) {
+      const k = (b.createdAt as Date).toISOString().slice(0, 10);
+      billsMap.set(k, (billsMap.get(k) ?? 0) + Number(b.amountPaid));
+    }
+
+    const chartDays: ChartDay[] = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(cacheNow);
+      d.setDate(d.getDate() - (6 - i));
+      const k = d.toISOString().slice(0, 10);
+      return {
+        label: d.toLocaleDateString("en-IN", { weekday: "short" }),
+        date: k,
+        orders: ordersMap.get(k) ?? 0,
+        bills: billsMap.get(k) ?? 0,
+      };
+    });
+
+    return {
+      totalOrderRevenue,
+      totalBillCollected,
+      totalOutstanding,
+      totalRevenue,
+      totalSales,
+      orderCount,
+      billCount,
+      thisMonthRevenue,
+      chartDays,
+      displayOrders: displayOrders.map((o) => ({
+        id: o.id,
+        orderNumber: o.orderNumber,
+        totalAmount: Number(o.totalAmount),
+        status: o.status,
+        deliveryType: o.deliveryType,
+        createdAt: (o.createdAt as Date).toISOString(),
+        customer: o.customer,
+      })),
+      displayBills: displayBills.map((b) => ({
+        id: b.id,
+        billNumber: b.billNumber,
+        amountPaid: Number(b.amountPaid),
+        balanceDue: Number(b.balanceDue),
+        status: b.status,
+        createdAt: (b.createdAt as Date).toISOString(),
+        customerName: b.customerName,
+        customer: b.customer,
+      })),
+      customerCount,
+      unreadInquiries,
+      orderStatusCounts: orderStatusCounts.map((s) => ({ status: s.status, count: s._count.id })),
+    };
+  },
+  ["admin-dashboard-stats"],
+  { revalidate: 30 },
+);
+
 export default async function AdminDashboard() {
   const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const [
-    products,
-    categories,
-    rates,
-    allOrderAgg,
-    allBillAgg,
-    recentOrders,
-    recentBills,
+  const [products, categories, rates, stats] = await Promise.all([
+    getAllProducts(),
+    getCategories(),
+    getCurrentRates(),
+    getDashboardStats(),
+  ]);
+
+  const {
+    totalRevenue,
+    totalOrderRevenue,
+    totalBillCollected,
+    totalOutstanding,
+    totalSales,
+    orderCount,
+    billCount,
+    thisMonthRevenue,
+    chartDays,
+    displayOrders: recentFiveOrders,
+    displayBills: recentFiveBills,
     customerCount,
     unreadInquiries,
     orderStatusCounts,
-  ] = await Promise.all([
-    storeGetAllProducts(),
-    storeGetAllCategories(),
-    getLiveRates(),
-    db.order.aggregate({
-      _sum: { totalAmount: true },
-      _count: { id: true },
-      where: { status: { notIn: ["PENDING_PAYMENT", "CANCELLED"] } },
-    }),
-    db.bill.aggregate({
-      _sum: { amountPaid: true, balanceDue: true },
-      _count: { id: true },
-    }),
-    db.order.findMany({
-      where: { status: { notIn: ["PENDING_PAYMENT", "CANCELLED"] } },
-      select: {
-        id: true,
-        orderNumber: true,
-        totalAmount: true,
-        status: true,
-        deliveryType: true,
-        createdAt: true,
-        customer: { select: { name: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 60,
-    }),
-    db.bill.findMany({
-      select: {
-        id: true,
-        billNumber: true,
-        amountPaid: true,
-        balanceDue: true,
-        status: true,
-        createdAt: true,
-        customerName: true,
-        customer: { select: { name: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 60,
-    }),
-    db.customer.count(),
-    db.inquiry.count({ where: { isRead: false } }),
-    db.order.groupBy({
-      by: ["status"],
-      _count: { id: true },
-      where: { status: { notIn: ["PENDING_PAYMENT"] } },
-    }),
-  ]);
+  } = stats;
 
-  // ── Revenue metrics ─────────────────────────────────────────────────────────
-  const totalOrderRevenue = Number(allOrderAgg._sum.totalAmount ?? 0);
-  const totalBillCollected = Number(allBillAgg._sum.amountPaid ?? 0);
-  const totalOutstanding = Number(allBillAgg._sum.balanceDue ?? 0);
-  const totalRevenue = totalOrderRevenue + totalBillCollected;
-
-  const thisMonthOrders = recentOrders.filter((o) => o.createdAt >= thirtyDaysAgo);
-  const thisMonthBills = recentBills.filter((b) => b.createdAt >= thirtyDaysAgo);
-  const thisMonthRevenue =
-    thisMonthOrders.reduce((s, o) => s + Number(o.totalAmount), 0) +
-    thisMonthBills.reduce((s, b) => s + Number(b.amountPaid), 0);
-
-  const totalSales = (allOrderAgg._count.id ?? 0) + (allBillAgg._count.id ?? 0);
+  // ── Derived metrics ───────────────────────────────────────────────────────
   const avgSale = totalSales > 0 ? Math.round(totalRevenue / totalSales) : 0;
-
-  // ── Order status breakdown ────────────────────────────────────────────────
-  const statusMap = Object.fromEntries(
-    orderStatusCounts.map((s) => [s.status, s._count.id])
-  );
+  const statusMap = Object.fromEntries(orderStatusCounts.map((s) => [s.status, s.count]));
   const activeStatuses = ["CONFIRMED", "PROCESSING", "READY_FOR_PICKUP", "SHIPPED", "DELIVERED"] as const;
-
-  // ── 7-day chart data ──────────────────────────────────────────────────────
-  const last7 = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() - (6 - i));
-    return d;
-  });
-
-  const ordersMap = new Map<string, number>();
-  const billsMap = new Map<string, number>();
-  for (const o of recentOrders) {
-    const k = dayKey(o.createdAt);
-    ordersMap.set(k, (ordersMap.get(k) ?? 0) + Number(o.totalAmount));
-  }
-  for (const b of recentBills) {
-    const k = dayKey(b.createdAt);
-    billsMap.set(k, (billsMap.get(k) ?? 0) + Number(b.amountPaid));
-  }
-
-  const chartDays: ChartDay[] = last7.map((d) => {
-    const k = dayKey(d);
-    return {
-      label: d.toLocaleDateString("en-IN", { weekday: "short" }),
-      date: k,
-      orders: ordersMap.get(k) ?? 0,
-      bills: billsMap.get(k) ?? 0,
-    };
-  });
 
   // ── Products stats ────────────────────────────────────────────────────────
   const lowStock = products.filter((p) => p.stockQty > 0 && p.stockQty <= 3);
@@ -242,10 +315,6 @@ export default async function AdminDashboard() {
   // ── Metal rates ───────────────────────────────────────────────────────────
   const gold = rates.find((r) => r.metalId === "metal-gold");
   const silver = rates.find((r) => r.metalId === "metal-silver");
-
-  // ── Recent 5 orders ───────────────────────────────────────────────────────
-  const recentFiveOrders = recentOrders.slice(0, 5);
-  const recentFiveBills = recentBills.slice(0, 5);
 
   return (
     <div className="p-8 space-y-8">
@@ -316,14 +385,14 @@ export default async function AdminDashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <ActivityCard
             label="Online Orders"
-            value={allOrderAgg._count.id ?? 0}
+            value={orderCount}
             icon={ShoppingBag}
             iconColor="text-rose-gold"
             href="/admin/orders"
           />
           <ActivityCard
             label="Walk-in Bills"
-            value={allBillAgg._count.id ?? 0}
+            value={billCount}
             icon={Receipt}
             iconColor="text-amber-500"
             href="/admin/billing"
@@ -583,7 +652,7 @@ export default async function AdminDashboard() {
                       </div>
                       <p className="text-xs text-gray-400 truncate">
                         {o.customer.name ?? "Customer"} ·{" "}
-                        {o.createdAt.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                        {new Date(o.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
                       </p>
                     </div>
                     <span className="text-sm font-bold text-brown-dark shrink-0">
@@ -641,7 +710,7 @@ export default async function AdminDashboard() {
                       </div>
                       <p className="text-xs text-gray-400 truncate">
                         {customerName} ·{" "}
-                        {b.createdAt.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                        {new Date(b.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
                       </p>
                     </div>
                     <div className="text-right shrink-0">

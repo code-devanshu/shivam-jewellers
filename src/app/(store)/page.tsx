@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   },
 };
 import { ArrowRight, ShieldCheck, Star, Truck } from "lucide-react";
-import { getCategories, getProducts, getCurrentRates } from "@/lib/data";
+import { getCategories, getFeaturedProducts, getCurrentRates } from "@/lib/data";
 import { getCustomerSession } from "@/lib/customer-auth";
 import { getWishlistedProductIds } from "@/lib/customer-store";
 import ProductCard from "@/components/store/ProductCard";
@@ -26,7 +26,7 @@ export default async function HomePage() {
 
   const [categories, featured, rates, wishlistedIds] = await Promise.all([
     getCategories(),
-    getProducts({ featured: true }),
+    getFeaturedProducts(),
     getCurrentRates(),
     customerId ? getWishlistedProductIds(customerId) : Promise.resolve([]),
   ]);

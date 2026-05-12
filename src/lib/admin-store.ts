@@ -12,6 +12,15 @@ export async function storeGetAllProducts(): Promise<Product[]> {
   return rows.map(mapProduct);
 }
 
+export async function storeGetFeaturedProducts(): Promise<Product[]> {
+  const rows = await db.product.findMany({
+    where: { isFeatured: true, isAvailable: true },
+    include: { category: true, metal: true, images: true, variants: true },
+    orderBy: { createdAt: "desc" },
+  });
+  return rows.map(mapProduct);
+}
+
 export async function storeGetProductBySlug(
   slug: string,
 ): Promise<Product | null> {
