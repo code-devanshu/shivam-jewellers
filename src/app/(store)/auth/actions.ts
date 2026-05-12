@@ -1,10 +1,10 @@
 "use server";
 
-import { createHash } from "crypto";
+import { createHash, randomInt } from "crypto";
 import { redirect } from "next/navigation";
-import { supabaseAdmin } from "@/lib/supabase-admin";
 import { db } from "@/lib/db";
 import { setCustomerSession, clearCustomerSession } from "@/lib/customer-auth";
+import { sendOtpEmail } from "@/lib/resend";
 
 const BYPASS_EMAILS = [
   "admin.devanshu@shivamjewellers.com",
@@ -14,6 +14,10 @@ const BYPASS_EMAILS = [
 function emailToId(email: string): string {
   const h = createHash("sha256").update(email).digest("hex");
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+}
+
+function isValidEmail(raw: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw.trim());
 }
 
 export async function bypassLogin(
@@ -34,53 +38,57 @@ export async function bypassLogin(
   redirect(next);
 }
 
-export async function createCustomerSession(
-  accessToken: string,
-  next = "/"
+export async function sendOtp(
+  rawEmail: string,
+): Promise<{ error: string } | { ok: true }> {
+  const email = rawEmail.trim().toLowerCase();
+  if (!isValidEmail(email)) return { error: "Enter a valid email address." };
+
+  // 60-second cooldown to prevent abuse
+  const recent = await db.customerOtp.findFirst({
+    where: { email, createdAt: { gt: new Date(Date.now() - 60_000) } },
+  });
+  if (recent) return { error: "Please wait 60 seconds before requesting another OTP." };
+
+  const code = String(randomInt(100000, 999999));
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  await db.customerOtp.deleteMany({ where: { email } });
+  await db.customerOtp.create({ data: { email, code, expiresAt } });
+  await sendOtpEmail(email, code);
+
+  return { ok: true };
+}
+
+export async function verifyOtp(
+  rawEmail: string,
+  code: string,
+  next = "/",
 ): Promise<{ error: string } | never> {
-  const {
-    data: { user },
-    error,
-  } = await supabaseAdmin.auth.getUser(accessToken);
+  const email = rawEmail.trim().toLowerCase();
+  if (!isValidEmail(email)) return { error: "Invalid email address." };
 
-  if (error || !user) {
-    return { error: "Could not verify your session. Please try again." };
+  const record = await db.customerOtp.findFirst({
+    where: { email },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!record) return { error: "No OTP found. Please request a new one." };
+  if (new Date() > record.expiresAt) {
+    await db.customerOtp.delete({ where: { id: record.id } });
+    return { error: "OTP has expired. Please request a new one." };
   }
+  if (record.code !== code) return { error: "Incorrect OTP. Please try again." };
 
-  let customerId = user.id;
+  await db.customerOtp.delete({ where: { id: record.id } });
 
-  try {
-    await db.customer.upsert({
-      where: { id: user.id },
-      update: {
-        phone: user.phone || null,
-        email: user.email || null,
-      },
-      create: {
-        id: user.id,
-        phone: user.phone || null,
-        email: user.email || null,
-      },
-    });
-  } catch (e: any) {
-    // Phone already claimed by a different Supabase identity — find that customer
-    // and use their record so the same person doesn't get two accounts.
-    if (e.code === "P2002" && e.meta?.target?.includes("phone") && user.phone) {
-      const existing = await db.customer.findUnique({
-        where: { phone: user.phone },
-      });
-      if (!existing) throw e;
-      await db.customer.update({
-        where: { id: existing.id },
-        data: { email: user.email ?? null },
-      });
-      customerId = existing.id;
-    } else {
-      throw e;
-    }
-  }
+  const customer = await db.customer.upsert({
+    where: { email },
+    update: {},
+    create: { email },
+  });
 
-  await setCustomerSession(customerId);
+  await setCustomerSession(customer.id);
   redirect(next);
 }
 

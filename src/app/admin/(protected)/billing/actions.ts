@@ -66,14 +66,59 @@ export async function createBill(
   const status =
     balanceDue <= 0 ? "PAID" : amountPaid > 0 ? "PARTIAL" : "UNPAID";
 
+  // For walk-in customers with a phone or email, find or create a Customer
+  // record so they appear in future "Search Existing" lookups.
+  // We look up by phone first, then email — each field is unique so we must
+  // not include a field in the create payload if it might already belong to
+  // a different customer.
+  let resolvedCustomerId = input.customerId || null;
+  if (!resolvedCustomerId && (input.customerPhone || input.customerEmail)) {
+    let existing: { id: string } | null = null;
+
+    if (input.customerPhone) {
+      existing = await db.customer.findUnique({
+        where: { phone: input.customerPhone },
+        select: { id: true },
+      });
+    }
+    if (!existing && input.customerEmail) {
+      // findFirst avoids the strict unique-key typing issue with nullable emails
+      existing = await db.customer.findFirst({
+        where: { email: input.customerEmail },
+        select: { id: true },
+      });
+    }
+
+    if (existing) {
+      resolvedCustomerId = existing.id;
+      if (input.customerName) {
+        await db.customer.update({
+          where: { id: existing.id },
+          data: { name: input.customerName },
+        });
+      }
+    } else {
+      const newCustomer = await db.customer.create({
+        data: {
+          id: crypto.randomUUID(),
+          name: input.customerName ?? null,
+          phone: input.customerPhone ?? null,
+          email: input.customerEmail ?? null,
+        },
+        select: { id: true },
+      });
+      resolvedCustomerId = newCustomer.id;
+    }
+  }
+
   const bill = await db.$transaction(async (tx) => {
     const b = await tx.bill.create({
       data: {
         billNumber,
-        customerId: input.customerId || null,
-        customerName: input.customerName || null,
-        customerPhone: input.customerPhone || null,
-        customerEmail: input.customerEmail || null,
+        customerId: resolvedCustomerId,
+        customerName: resolvedCustomerId ? null : (input.customerName || null),
+        customerPhone: resolvedCustomerId ? null : (input.customerPhone || null),
+        customerEmail: resolvedCustomerId ? null : (input.customerEmail || null),
         subtotal: input.subtotal,
         gstAmount: input.gstAmount,
         totalAmount: input.totalAmount,
@@ -218,6 +263,22 @@ export async function saveStoreSettings(
 
   revalidatePath("/admin/billing");
   revalidatePath("/admin/billing/settings");
+  return {};
+}
+
+export async function deleteBill(billId: string): Promise<{ error?: string }> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Unauthorized" };
+  }
+
+  const bill = await db.bill.findUnique({ where: { id: billId }, select: { id: true } });
+  if (!bill) return { error: "Bill not found" };
+
+  await db.bill.delete({ where: { id: billId } });
+
+  revalidatePath("/admin/billing");
   return {};
 }
 

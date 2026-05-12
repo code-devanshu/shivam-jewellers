@@ -103,7 +103,7 @@ export default function CheckoutClient({
   const [state, setState] = useState("");
   const [pincode, setPincode] = useState("");
   const [notes, setNotes] = useState("");
-  const [paymentMethod] = useState<"RAZORPAY" | "COD">("COD");
+  const [paymentMethod, setPaymentMethod] = useState<"RAZORPAY" | "COD">("COD");
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -360,26 +360,37 @@ export default function CheckoutClient({
             <div className="bg-white border border-blush rounded-2xl p-6">
               <h2 className="font-semibold text-brown-dark mb-4">Payment Method</h2>
               <div className="grid grid-cols-2 gap-3">
-                {/* Cash on Delivery — active */}
-                <div className="flex items-center gap-3 p-4 rounded-xl border-2 border-rose-gold bg-blush/40 text-left">
-                  <Banknote size={20} className="text-rose-gold shrink-0" />
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("COD")}
+                  className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition ${
+                    paymentMethod === "COD"
+                      ? "border-rose-gold bg-blush/40"
+                      : "border-blush bg-white hover:border-rose-gold/50"
+                  }`}
+                >
+                  <Banknote size={20} className={paymentMethod === "COD" ? "text-rose-gold shrink-0" : "text-brown/40 shrink-0"} />
                   <div>
                     <p className="text-sm font-semibold text-brown-dark">Cash on Delivery</p>
                     <p className="text-xs text-brown/50 mt-0.5">Pay when you collect</p>
                   </div>
-                </div>
+                </button>
 
-                {/* Pay Online — disabled */}
-                <div className="relative flex items-center gap-3 p-4 rounded-xl border-2 border-blush bg-gray-50 opacity-60 cursor-not-allowed select-none">
-                  <span className="absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wider bg-brown/10 text-brown/60 px-1.5 py-0.5 rounded-full">
-                    Coming soon
-                  </span>
-                  <Banknote size={20} className="text-brown/30 shrink-0" />
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("RAZORPAY")}
+                  className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition ${
+                    paymentMethod === "RAZORPAY"
+                      ? "border-rose-gold bg-blush/40"
+                      : "border-blush bg-white hover:border-rose-gold/50"
+                  }`}
+                >
+                  <Banknote size={20} className={paymentMethod === "RAZORPAY" ? "text-rose-gold shrink-0" : "text-brown/40 shrink-0"} />
                   <div>
                     <p className="text-sm font-semibold text-brown-dark">Pay Online</p>
                     <p className="text-xs text-brown/50 mt-0.5">UPI, Card, Net Banking</p>
                   </div>
-                </div>
+                </button>
               </div>
             </div>
           </div>

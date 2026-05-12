@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Script from "next/script";
 import { requireCustomer } from "@/lib/customer-auth";
 import { db } from "@/lib/db";
 import { getLiveRates } from "@/lib/live-rates";
@@ -78,14 +79,17 @@ export default async function CheckoutPage() {
   });
 
   return (
-    <CheckoutClient
-      items={items}
-      subtotal={subtotal}
-      gstAmount={gstAmount}
-      totalAmount={subtotal + gstAmount}
-      customerName={customer?.name ?? null}
-      customerPhone={customer?.phone ?? null}
-      customerEmail={customer?.email ?? null}
-    />
+    <>
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" />
+      <CheckoutClient
+        items={items}
+        subtotal={subtotal}
+        gstAmount={gstAmount}
+        totalAmount={subtotal + gstAmount}
+        customerName={customer?.name ?? null}
+        customerPhone={customer?.phone ?? null}
+        customerEmail={customer?.email ?? null}
+      />
+    </>
   );
 }

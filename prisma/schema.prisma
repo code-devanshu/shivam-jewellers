@@ -167,12 +167,21 @@ model ProductVariant {
 
 // ─── Customers ────────────────────────────────────────────────────────────────
 
-// Mirrors Supabase auth.users — id is the Supabase UUID.
+model CustomerOtp {
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
 model Customer {
-  id        String     @id // Supabase auth.users.id
+  id        String     @id @default(cuid())
   phone     String?    @unique
   name      String?
-  email     String?
+  email     String?    @unique
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   cart      Cart?

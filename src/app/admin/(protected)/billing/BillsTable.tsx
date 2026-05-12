@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
-import { Search, Receipt, Plus, X } from "lucide-react";
+import { Search, Receipt, Plus, X, Trash2, AlertTriangle, Loader2 } from "lucide-react";
 import { formatPrice } from "@/lib/price";
 import type { BillStatus } from "@prisma/client";
+import { deleteBill } from "./actions";
 
 const STATUS_STYLE: Record<BillStatus, string> = {
   PAID: "bg-green-100 text-green-700",
@@ -39,9 +40,15 @@ const STATUS_OPTIONS: { value: BillStatus | "ALL"; label: string }[] = [
   { value: "UNPAID", label: "Unpaid" },
 ];
 
-export default function BillsTable({ bills }: { bills: BillRow[] }) {
+type PendingDelete = { id: string; billNumber: string } | null;
+
+export default function BillsTable({ bills: initialBills }: { bills: BillRow[] }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<BillStatus | "ALL">("ALL");
+  const [bills, setBills] = useState(initialBills);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [isDeleting, startDeleteTransition] = useTransition();
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -56,6 +63,20 @@ export default function BillsTable({ bills }: { bills: BillRow[] }) {
       );
     });
   }, [bills, query, statusFilter]);
+
+  function handleDeleteConfirm() {
+    if (!pendingDelete) return;
+    setDeleteError("");
+    startDeleteTransition(async () => {
+      const result = await deleteBill(pendingDelete.id);
+      if (result.error) {
+        setDeleteError(result.error);
+        return;
+      }
+      setBills((prev) => prev.filter((b) => b.id !== pendingDelete.id));
+      setPendingDelete(null);
+    });
+  }
 
   if (bills.length === 0) {
     return (
@@ -74,6 +95,52 @@ export default function BillsTable({ bills }: { bills: BillRow[] }) {
 
   return (
     <div>
+      {/* Delete confirmation modal */}
+      {pendingDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="shrink-0 w-9 h-9 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertTriangle size={16} className="text-red-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-brown-dark">Delete Bill?</p>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  <span className="font-medium">{pendingDelete.billNumber}</span> will be permanently deleted along with all its items and payment records. This cannot be undone.
+                </p>
+              </div>
+            </div>
+            {deleteError && (
+              <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2 mb-4">
+                {deleteError}
+              </p>
+            )}
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => { setPendingDelete(null); setDeleteError(""); }}
+                disabled={isDeleting}
+                className="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+                className="px-4 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-full transition disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isDeleting ? (
+                  <><Loader2 size={13} className="animate-spin" /> Deleting…</>
+                ) : (
+                  "Delete Bill"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Search + filter bar */}
       <div className="flex items-center gap-3 mb-4">
         <div className="relative flex-1 max-w-sm">
@@ -133,6 +200,7 @@ export default function BillsTable({ bills }: { bills: BillRow[] }) {
                 <th className="text-right px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Paid</th>
                 <th className="text-right px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Balance</th>
                 <th className="text-center px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</th>
+                <th className="px-3 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -166,6 +234,16 @@ export default function BillsTable({ bills }: { bills: BillRow[] }) {
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_STYLE[bill.status]}`}>
                       {bill.status === "PAID" ? "Paid" : bill.status === "PARTIAL" ? "Partial" : "Unpaid"}
                     </span>
+                  </td>
+                  <td className="px-3 py-3.5 text-center">
+                    <button
+                      type="button"
+                      onClick={() => { setPendingDelete({ id: bill.id, billNumber: bill.billNumber }); setDeleteError(""); }}
+                      className="text-gray-300 hover:text-red-500 transition"
+                      title="Delete bill"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </td>
                 </tr>
               ))}

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { BillStatus } from "@prisma/client";
 import RecordPayment from "./RecordPayment";
+import DeleteBillButton from "./DeleteBillButton";
 
 export const metadata = { title: "Bill Details" };
 
@@ -96,6 +97,7 @@ export default async function BillDetailPage({
                 >
                   <Download size={12} /> Invoice PDF
                 </a>
+                <DeleteBillButton billId={bill.id} billNumber={bill.billNumber} />
               </div>
             </div>
           </div>
