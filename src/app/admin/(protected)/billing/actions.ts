@@ -26,11 +26,13 @@ export type BillItemInput = {
   metalName?: string;
   purity?: string;
   weightGrams?: number;
+  grossWeightGrams?: number;
   metalRate?: number;
   makingCharge?: number;
   makingChargeType?: MakingChargeType;
   hsnCode?: string;
   gstPercent?: number;
+  discountPercent?: number;
   quantity: number;
   unitPrice: number;
   totalPrice: number;
@@ -41,10 +43,17 @@ export type CreateBillInput = {
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;
+  customerAddress?: string;
+  customerState?: string;
+  customerPan?: string;
+  customerGstin?: string;
   items: BillItemInput[];
   subtotal: number;
   gstAmount: number;
   totalAmount: number;
+  discountAmount?: number;
+  exchangeValue?: number;
+  exchangeLabel?: string;
   initialPaymentAmount?: number;
   initialPaymentMethod?: BillPaymentMethod;
   initialPaymentNote?: string;
@@ -62,7 +71,10 @@ export async function createBill(
 
   const billNumber = await nextBillNumber();
   const amountPaid = input.initialPaymentAmount ?? 0;
-  const balanceDue = input.totalAmount - amountPaid;
+  const discountAmt = input.discountAmount ?? 0;
+  const exchangeAmt = input.exchangeValue ?? 0;
+  const effectiveDue = input.totalAmount - discountAmt - exchangeAmt;
+  const balanceDue = Math.max(0, effectiveDue - amountPaid);
   const status =
     balanceDue <= 0 ? "PAID" : amountPaid > 0 ? "PARTIAL" : "UNPAID";
 
@@ -115,13 +127,20 @@ export async function createBill(
     const b = await tx.bill.create({
       data: {
         billNumber,
-        customerId: resolvedCustomerId,
+        customer: resolvedCustomerId ? { connect: { id: resolvedCustomerId } } : undefined,
         customerName: resolvedCustomerId ? null : (input.customerName || null),
         customerPhone: resolvedCustomerId ? null : (input.customerPhone || null),
         customerEmail: resolvedCustomerId ? null : (input.customerEmail || null),
+        customerAddress: input.customerAddress || null,
+        customerState: input.customerState || null,
+        customerPan: input.customerPan || null,
+        customerGstin: input.customerGstin || null,
         subtotal: input.subtotal,
         gstAmount: input.gstAmount,
         totalAmount: input.totalAmount,
+        discountAmount: discountAmt > 0 ? discountAmt : null,
+        exchangeValue: exchangeAmt > 0 ? exchangeAmt : null,
+        exchangeLabel: input.exchangeLabel || null,
         amountPaid,
         balanceDue,
         status,
@@ -135,11 +154,13 @@ export async function createBill(
             metalName: item.metalName || null,
             purity: item.purity || null,
             weightGrams: item.weightGrams ?? null,
+            grossWeightGrams: item.grossWeightGrams ?? null,
             metalRate: item.metalRate ?? null,
             makingCharge: item.makingCharge ?? null,
             makingChargeType: item.makingChargeType || null,
             hsnCode: item.hsnCode || null,
             gstPercent: item.gstPercent ?? null,
+            discountPercent: item.discountPercent ?? null,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             totalPrice: item.totalPrice,

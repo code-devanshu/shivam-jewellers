@@ -108,6 +108,14 @@ export default async function BillDetailPage({
             <p className="font-medium text-brown-dark">{customerName}</p>
             {customerPhone && <p className="text-sm text-gray-400 mt-0.5">{customerPhone}</p>}
             {customerEmail && <p className="text-sm text-gray-400 mt-0.5">{customerEmail}</p>}
+            {bill.customerAddress && <p className="text-sm text-gray-400 mt-0.5">{bill.customerAddress}</p>}
+            {bill.customerState && <p className="text-sm text-gray-400">{bill.customerState}</p>}
+            {bill.customerPan && (
+              <p className="text-xs text-gray-400 mt-1">PAN: {bill.customerPan}</p>
+            )}
+            {bill.customerGstin && (
+              <p className="text-xs text-gray-400">GSTIN: {bill.customerGstin}</p>
+            )}
             {bill.customer && (
               <p className="text-xs text-rose-gold mt-1.5">Linked to customer account</p>
             )}
@@ -131,12 +139,16 @@ export default async function BillDetailPage({
                       <p className="text-xs text-gray-400">
                         {item.metalName}
                         {item.purity && ` · ${item.purity}`}
-                        {item.weightGrams && ` · ${Number(item.weightGrams)}g`}
+                        {item.weightGrams && ` · ${Number(item.weightGrams)}g net`}
+                        {item.grossWeightGrams && ` / ${Number(item.grossWeightGrams)}g gross`}
                         {item.metalRate && ` @ ${formatPrice(Number(item.metalRate))}/g`}
                       </p>
                     )}
                     {item.hsnCode && (
                       <p className="text-xs text-gray-300">HSN: {item.hsnCode}{item.gstPercent ? ` · GST ${Number(item.gstPercent)}%` : ""}</p>
+                    )}
+                    {item.discountPercent && Number(item.discountPercent) > 0 && (
+                      <p className="text-xs text-green-600">Discount: {Number(item.discountPercent)}%</p>
                     )}
                     <p className="text-xs text-gray-400 mt-0.5">
                       {item.type === "CUSTOM" ? "Custom item" : "Catalog product"}
@@ -165,6 +177,30 @@ export default async function BillDetailPage({
                 <span>Total</span>
                 <span className="text-rose-gold">{formatPrice(Number(bill.totalAmount))}</span>
               </div>
+              {bill.discountAmount && Number(bill.discountAmount) > 0 && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>Discount</span>
+                  <span>- {formatPrice(Number(bill.discountAmount))}</span>
+                </div>
+              )}
+              {bill.exchangeValue && Number(bill.exchangeValue) > 0 && (
+                <div className="flex justify-between text-sm text-amber-600">
+                  <span>{bill.exchangeLabel || "Old Gold Exchange"}</span>
+                  <span>- {formatPrice(Number(bill.exchangeValue))}</span>
+                </div>
+              )}
+              {(Number(bill.discountAmount ?? 0) > 0 || Number(bill.exchangeValue ?? 0) > 0) && (
+                <div className="flex justify-between font-semibold text-brown-dark border-t border-gray-100 pt-1.5">
+                  <span>Amount Due</span>
+                  <span>
+                    {formatPrice(
+                      Number(bill.totalAmount) -
+                        Number(bill.discountAmount ?? 0) -
+                        Number(bill.exchangeValue ?? 0)
+                    )}
+                  </span>
+                </div>
+              )}
               {Number(bill.amountPaid) > 0 && (
                 <>
                   <div className="flex justify-between text-sm text-green-600 font-medium">

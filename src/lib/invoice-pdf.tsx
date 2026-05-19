@@ -455,6 +455,10 @@ export type BillInvoiceData = {
   customerName?: string | null;
   customerPhone?: string | null;
   customerEmail?: string | null;
+  customerAddress?: string | null;
+  customerState?: string | null;
+  customerPan?: string | null;
+  customerGstin?: string | null;
   storeSettings?: {
     storeName?: string | null;
     storeAddress?: string | null;
@@ -466,9 +470,13 @@ export type BillInvoiceData = {
     metalName?: string | null;
     purity?: string | null;
     weightGrams?: number | null;
+    grossWeightGrams?: number | null;
     metalRate?: number | null;
+    makingCharge?: number | null;
+    makingChargeType?: string | null;
     hsnCode?: string | null;
     gstPercent?: number | null;
+    discountPercent?: number | null;
     quantity: number;
     unitPrice: number;
     totalPrice: number;
@@ -476,6 +484,9 @@ export type BillInvoiceData = {
   subtotal: number;
   gstAmount: number;
   totalAmount: number;
+  discountAmount?: number | null;
+  exchangeValue?: number | null;
+  exchangeLabel?: string | null;
   amountPaid: number;
   balanceDue: number;
   payments: { amount: number; method: string; paidAt: Date | string; note?: string | null }[];
@@ -527,6 +538,18 @@ function BillInvoiceDocument({ data }: { data: BillInvoiceData }) {
             {data.customerEmail ? (
               <Text style={styles.metaLineGray}>{data.customerEmail}</Text>
             ) : null}
+            {data.customerAddress ? (
+              <Text style={styles.metaLineGray}>{data.customerAddress}</Text>
+            ) : null}
+            {data.customerState ? (
+              <Text style={styles.metaLineGray}>{data.customerState}</Text>
+            ) : null}
+            {data.customerPan ? (
+              <Text style={styles.metaLineGray}>PAN: {data.customerPan}</Text>
+            ) : null}
+            {data.customerGstin ? (
+              <Text style={styles.metaLineGray}>GSTIN: {data.customerGstin}</Text>
+            ) : null}
           </View>
           <View style={styles.metaBox}>
             <Text style={styles.metaBoxTitle}>Payment Summary</Text>
@@ -559,12 +582,21 @@ function BillInvoiceDocument({ data }: { data: BillInvoiceData }) {
             const metalLine = [
               item.metalName,
               item.purity,
-              item.weightGrams && `${item.weightGrams}g`,
+              item.grossWeightGrams && `${item.grossWeightGrams}g gross`,
+              item.weightGrams && `${item.weightGrams}g net`,
               item.metalRate && `@ ${fmt(item.metalRate)}/g`,
             ].filter(Boolean).join(" · ");
             sub.push(metalLine);
           }
+          if (item.makingCharge != null && item.makingCharge > 0) {
+            sub.push(
+              item.makingChargeType === "PERCENT"
+                ? `Making ${item.makingCharge}%`
+                : `Making ₹${item.makingCharge}`
+            );
+          }
           if (item.gstPercent) sub.push(`GST ${item.gstPercent}%`);
+          if (item.discountPercent && item.discountPercent > 0) sub.push(`Discount ${item.discountPercent}%`);
           if (item.variantLabel) sub.unshift(item.variantLabel);
 
           return (
@@ -586,36 +618,64 @@ function BillInvoiceDocument({ data }: { data: BillInvoiceData }) {
         })}
 
         {/* ── Totals ── */}
-        <View style={styles.totalsSection}>
-          <View style={[styles.totalsBox, { width: 260 }]}>
-            <View style={styles.totalsRow}>
-              <Text style={styles.totalsLabel}>Subtotal (excl. GST)</Text>
-              <Text style={styles.totalsValue}>{fmt(data.subtotal)}</Text>
-            </View>
-            <View style={styles.totalsRow}>
-              <Text style={styles.totalsLabel}>GST</Text>
-              <Text style={styles.totalsValue}>{fmt(data.gstAmount)}</Text>
-            </View>
-            <View style={styles.totalsRowFinal}>
-              <Text style={styles.totalsFinalLabel}>Total</Text>
-              <Text style={styles.totalsFinalValue}>{fmt(data.totalAmount)}</Text>
-            </View>
-            {data.amountPaid > 0 && (
-              <>
-                <View style={[styles.totalsRow, { backgroundColor: "#f0fdf4" }]}>
-                  <Text style={[styles.totalsLabel, { color: "#16a34a" }]}>Amount Paid</Text>
-                  <Text style={[styles.totalsValue, { color: "#16a34a" }]}>{fmt(data.amountPaid)}</Text>
+        {(() => {
+          const discount = data.discountAmount ?? 0;
+          const exchange = data.exchangeValue ?? 0;
+          const hasAdjustment = discount > 0 || exchange > 0;
+          const amountDue = data.totalAmount - discount - exchange;
+          return (
+            <View style={styles.totalsSection}>
+              <View style={[styles.totalsBox, { width: 260 }]}>
+                <View style={styles.totalsRow}>
+                  <Text style={styles.totalsLabel}>Subtotal (excl. GST)</Text>
+                  <Text style={styles.totalsValue}>{fmt(data.subtotal)}</Text>
                 </View>
-                {data.balanceDue > 0 && (
-                  <View style={[styles.totalsRow, { backgroundColor: "#fef2f2" }]}>
-                    <Text style={[styles.totalsLabel, { color: "#dc2626" }]}>Balance Due</Text>
-                    <Text style={[styles.totalsValue, { color: "#dc2626" }]}>{fmt(data.balanceDue)}</Text>
+                <View style={styles.totalsRow}>
+                  <Text style={styles.totalsLabel}>GST</Text>
+                  <Text style={styles.totalsValue}>{fmt(data.gstAmount)}</Text>
+                </View>
+                <View style={styles.totalsRowFinal}>
+                  <Text style={styles.totalsFinalLabel}>Total</Text>
+                  <Text style={styles.totalsFinalValue}>{fmt(data.totalAmount)}</Text>
+                </View>
+                {discount > 0 && (
+                  <View style={[styles.totalsRow, { backgroundColor: "#f0fdf4" }]}>
+                    <Text style={[styles.totalsLabel, { color: "#16a34a" }]}>Discount</Text>
+                    <Text style={[styles.totalsValue, { color: "#16a34a" }]}>- {fmt(discount)}</Text>
                   </View>
                 )}
-              </>
-            )}
-          </View>
-        </View>
+                {exchange > 0 && (
+                  <View style={[styles.totalsRow, { backgroundColor: "#fffbeb" }]}>
+                    <Text style={[styles.totalsLabel, { color: "#d97706" }]}>
+                      {data.exchangeLabel ?? "Old Gold Exchange"}
+                    </Text>
+                    <Text style={[styles.totalsValue, { color: "#d97706" }]}>- {fmt(exchange)}</Text>
+                  </View>
+                )}
+                {hasAdjustment && (
+                  <View style={[styles.totalsRowFinal, { borderTopWidth: 1, borderTopColor: C.grayLight }]}>
+                    <Text style={styles.totalsFinalLabel}>Amount Due</Text>
+                    <Text style={styles.totalsFinalValue}>{fmt(amountDue)}</Text>
+                  </View>
+                )}
+                {data.amountPaid > 0 && (
+                  <>
+                    <View style={[styles.totalsRow, { backgroundColor: "#f0fdf4" }]}>
+                      <Text style={[styles.totalsLabel, { color: "#16a34a" }]}>Amount Paid</Text>
+                      <Text style={[styles.totalsValue, { color: "#16a34a" }]}>{fmt(data.amountPaid)}</Text>
+                    </View>
+                    {data.balanceDue > 0 && (
+                      <View style={[styles.totalsRow, { backgroundColor: "#fef2f2" }]}>
+                        <Text style={[styles.totalsLabel, { color: "#dc2626" }]}>Balance Due</Text>
+                        <Text style={[styles.totalsValue, { color: "#dc2626" }]}>{fmt(data.balanceDue)}</Text>
+                      </View>
+                    )}
+                  </>
+                )}
+              </View>
+            </View>
+          );
+        })()}
 
         {/* ── Payment history + Notes ── */}
         <View style={styles.infoRow}>

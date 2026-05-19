@@ -81,6 +81,7 @@ export default async function NewBillPage() {
       catalogProducts={catalogProducts}
       hasGstConfig={hasGstConfig}
       storeSettings={settings}
+      metalRates={ratesMap}
     />
   );
 }
