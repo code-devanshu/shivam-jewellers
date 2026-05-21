@@ -15,9 +15,10 @@ type Props = {
   product: Product;
   ratePerGram: number;
   isWishlisted?: boolean;
+  priority?: boolean;
 };
 
-export default function ProductCard({ product, ratePerGram, isWishlisted: initialWishlisted = false }: Props) {
+export default function ProductCard({ product, ratePerGram, isWishlisted: initialWishlisted = false, priority = false }: Props) {
   const primary = product.images.find((img) => img.isPrimary) ?? product.images[0];
   const { totalPrice } = calculatePrice(product, ratePerGram);
   const [cartState, setCartState] = useState<"idle" | "adding" | "added">("idle");
@@ -72,6 +73,7 @@ export default function ProductCard({ product, ratePerGram, isWishlisted: initia
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-300"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              priority={priority}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-rose-gold-light text-4xl">

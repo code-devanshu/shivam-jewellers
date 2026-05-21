@@ -230,7 +230,7 @@ export default function ProductImageGallery({ images, productName }: Props) {
                 >
                   <Image
                     src={img.url}
-                    alt=""
+                    alt={`${productName} view ${idx + 1}`}
                     fill
                     className="object-cover"
                     sizes="56px"

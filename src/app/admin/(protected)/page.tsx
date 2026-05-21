@@ -20,7 +20,11 @@ import { unstable_cache } from "next/cache";
 import { getAllProducts, getCategories, getCurrentRates } from "@/lib/data";
 import { formatPrice } from "@/lib/price";
 import { db } from "@/lib/db";
-import { RevenueBarChart, RevenueSplitDonut, type ChartDay } from "./DashboardCharts";
+import {
+  RevenueBarChart,
+  RevenueSplitDonut,
+  type ChartDay,
+} from "./DashboardCharts";
 
 export const metadata = { title: "Dashboard" };
 
@@ -52,21 +56,29 @@ function KpiCard({
   const inner = (
     <div className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-sm transition-shadow h-full">
       <div className="flex items-start justify-between mb-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBg}`}>
+        <div
+          className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBg}`}
+        >
           <Icon size={18} />
         </div>
-        {href && (
-          <ArrowRight size={14} className="text-gray-300 mt-1" />
-        )}
+        {href && <ArrowRight size={14} className="text-gray-300 mt-1" />}
       </div>
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">
+        {label}
+      </p>
       <p className="text-2xl font-bold text-brown-dark leading-none">{value}</p>
       {sub && (
         <p className={`text-xs mt-1.5 ${subColor ?? "text-gray-400"}`}>{sub}</p>
       )}
     </div>
   );
-  return href ? <Link href={href} className="block">{inner}</Link> : inner;
+  return href ? (
+    <Link href={href} className="block">
+      {inner}
+    </Link>
+  ) : (
+    inner
+  );
 }
 
 function ActivityCard({
@@ -86,7 +98,9 @@ function ActivityCard({
 }) {
   const inner = (
     <div className="bg-white border border-gray-200 rounded-2xl px-5 py-4 flex items-center gap-4 hover:shadow-sm transition-shadow">
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center bg-gray-50 ${iconColor}`}>
+      <div
+        className={`w-9 h-9 rounded-xl flex items-center justify-center bg-gray-50 ${iconColor}`}
+      >
         <Icon size={17} />
       </div>
       <div className="flex-1 min-w-0">
@@ -100,25 +114,41 @@ function ActivityCard({
       )}
     </div>
   );
-  return href ? <Link href={href} className="block">{inner}</Link> : inner;
+  return href ? (
+    <Link href={href} className="block">
+      {inner}
+    </Link>
+  ) : (
+    inner
+  );
 }
 
 const ORDER_STATUS_META: Record<
   string,
   { label: string; color: string; bg: string }
 > = {
-  CONFIRMED:        { label: "Confirmed",        color: "text-blue-600",   bg: "bg-blue-50" },
-  PROCESSING:       { label: "Processing",        color: "text-purple-600", bg: "bg-purple-50" },
-  READY_FOR_PICKUP: { label: "Ready for Pickup",  color: "text-teal-600",   bg: "bg-teal-50" },
-  SHIPPED:          { label: "Shipped",           color: "text-indigo-600", bg: "bg-indigo-50" },
-  DELIVERED:        { label: "Delivered",         color: "text-green-600",  bg: "bg-green-50" },
-  CANCELLED:        { label: "Cancelled",         color: "text-red-500",    bg: "bg-red-50" },
+  CONFIRMED: { label: "Confirmed", color: "text-blue-600", bg: "bg-blue-50" },
+  PROCESSING: {
+    label: "Processing",
+    color: "text-purple-600",
+    bg: "bg-purple-50",
+  },
+  READY_FOR_PICKUP: {
+    label: "Ready for Pickup",
+    color: "text-teal-600",
+    bg: "bg-teal-50",
+  },
+  SHIPPED: { label: "Shipped", color: "text-indigo-600", bg: "bg-indigo-50" },
+  DELIVERED: { label: "Delivered", color: "text-green-600", bg: "bg-green-50" },
+  CANCELLED: { label: "Cancelled", color: "text-red-500", bg: "bg-red-50" },
 };
 
 const getDashboardStats = unstable_cache(
   async () => {
     const cacheNow = new Date();
-    const thirtyDaysAgo = new Date(cacheNow.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(
+      cacheNow.getTime() - 30 * 24 * 60 * 60 * 1000,
+    );
     const sevenDaysAgo = new Date(cacheNow.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     const [
@@ -268,7 +298,10 @@ const getDashboardStats = unstable_cache(
       })),
       customerCount,
       unreadInquiries,
-      orderStatusCounts: orderStatusCounts.map((s) => ({ status: s.status, count: s._count.id })),
+      orderStatusCounts: orderStatusCounts.map((s) => ({
+        status: s.status,
+        count: s._count.id,
+      })),
     };
   },
   ["admin-dashboard-stats"],
@@ -304,12 +337,22 @@ export default async function AdminDashboard() {
 
   // ── Derived metrics ───────────────────────────────────────────────────────
   const avgSale = totalSales > 0 ? Math.round(totalRevenue / totalSales) : 0;
-  const statusMap = Object.fromEntries(orderStatusCounts.map((s) => [s.status, s.count]));
-  const activeStatuses = ["CONFIRMED", "PROCESSING", "READY_FOR_PICKUP", "SHIPPED", "DELIVERED"] as const;
+  const statusMap = Object.fromEntries(
+    orderStatusCounts.map((s) => [s.status, s.count]),
+  );
+  const activeStatuses = [
+    "CONFIRMED",
+    "PROCESSING",
+    "READY_FOR_PICKUP",
+    "SHIPPED",
+    "DELIVERED",
+  ] as const;
 
   // ── Products stats ────────────────────────────────────────────────────────
   const lowStock = products.filter((p) => p.stockQty > 0 && p.stockQty <= 3);
-  const outOfStock = products.filter((p) => p.stockQty <= 0 && p.isAvailable === false);
+  const outOfStock = products.filter(
+    (p) => p.stockQty <= 0 && p.isAvailable === false,
+  );
   const featuredCount = products.filter((p) => p.isFeatured).length;
 
   // ── Metal rates ───────────────────────────────────────────────────────────
@@ -321,9 +364,16 @@ export default async function AdminDashboard() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-serif font-bold text-brown-dark">Dashboard</h1>
+          <h1 className="text-2xl font-serif font-bold text-brown-dark">
+            Dashboard
+          </h1>
           <p className="text-sm text-gray-400 mt-0.5">
-            {now.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+            {now.toLocaleDateString("en-IN", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
           </p>
         </div>
         <div className="hidden sm:flex items-center gap-2">
@@ -363,8 +413,12 @@ export default async function AdminDashboard() {
           <KpiCard
             label="Outstanding"
             value={formatPrice(totalOutstanding)}
-            sub={totalOutstanding > 0 ? "Pending collections" : "All bills settled"}
-            subColor={totalOutstanding > 0 ? "text-amber-600" : "text-green-600"}
+            sub={
+              totalOutstanding > 0 ? "Pending collections" : "All bills settled"
+            }
+            subColor={
+              totalOutstanding > 0 ? "text-amber-600" : "text-green-600"
+            }
             icon={Wallet}
             iconBg="bg-amber-50 text-amber-500"
             href="/admin/billing"
@@ -420,8 +474,12 @@ export default async function AdminDashboard() {
         <div className="lg:col-span-2 bg-white border border-gray-200 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-semibold text-brown-dark text-sm">Revenue — Last 7 Days</h3>
-              <p className="text-xs text-gray-400 mt-0.5">Online orders + walk-in bills</p>
+              <h3 className="font-semibold text-brown-dark text-sm">
+                Revenue — Last 7 Days
+              </h3>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Online orders + walk-in bills
+              </p>
             </div>
             <div className="flex items-center gap-3 text-[11px] text-gray-500">
               <span className="flex items-center gap-1">
@@ -439,20 +497,30 @@ export default async function AdminDashboard() {
 
         {/* Donut split */}
         <div className="bg-white border border-gray-200 rounded-2xl p-5">
-          <h3 className="font-semibold text-brown-dark text-sm mb-1">Revenue Split</h3>
-          <p className="text-xs text-gray-400 mb-5">All-time channel breakdown</p>
-          <RevenueSplitDonut orders={totalOrderRevenue} bills={totalBillCollected} />
+          <h3 className="font-semibold text-brown-dark text-sm mb-1">
+            Revenue Split
+          </h3>
+          <p className="text-xs text-gray-400 mb-5">
+            All-time channel breakdown
+          </p>
+          <RevenueSplitDonut
+            orders={totalOrderRevenue}
+            bills={totalBillCollected}
+          />
 
           <div className="mt-5 pt-4 border-t border-gray-50 space-y-2">
             {gold && (
               <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-500 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-400" /> Gold rate
+                  <span className="w-2 h-2 rounded-full bg-amber-400" /> Gold
+                  rate
                 </span>
                 <span className="font-semibold text-brown-dark">
                   {formatPrice(gold.ratePerGram)}/g
                   {gold.source === "MANUAL" && (
-                    <span className="ml-1 text-gray-400 font-normal">(manual)</span>
+                    <span className="ml-1 text-gray-400 font-normal">
+                      (manual)
+                    </span>
                   )}
                 </span>
               </div>
@@ -460,12 +528,15 @@ export default async function AdminDashboard() {
             {silver && (
               <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-500 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-gray-400" /> Silver rate
+                  <span className="w-2 h-2 rounded-full bg-gray-400" /> Silver
+                  rate
                 </span>
                 <span className="font-semibold text-brown-dark">
                   {formatPrice(silver.ratePerGram)}/g
                   {silver.source === "MANUAL" && (
-                    <span className="ml-1 text-gray-400 font-normal">(manual)</span>
+                    <span className="ml-1 text-gray-400 font-normal">
+                      (manual)
+                    </span>
                   )}
                 </span>
               </div>
@@ -487,7 +558,9 @@ export default async function AdminDashboard() {
         {/* Order pipeline */}
         <div className="bg-white border border-gray-200 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-brown-dark text-sm">Order Pipeline</h3>
+            <h3 className="font-semibold text-brown-dark text-sm">
+              Order Pipeline
+            </h3>
             <Link
               href="/admin/orders"
               className="text-xs text-rose-gold hover:text-rose-gold-dark font-medium flex items-center gap-1"
@@ -501,7 +574,9 @@ export default async function AdminDashboard() {
               const meta = ORDER_STATUS_META[s];
               return (
                 <div key={s} className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${meta.bg}`}>
+                  <div
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center ${meta.bg}`}
+                  >
                     {s === "DELIVERED" ? (
                       <CheckCircle2 size={14} className={meta.color} />
                     ) : s === "SHIPPED" ? (
@@ -512,8 +587,12 @@ export default async function AdminDashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium text-gray-700">{meta.label}</span>
-                      <span className={`text-xs font-bold ${meta.color}`}>{count}</span>
+                      <span className="text-xs font-medium text-gray-700">
+                        {meta.label}
+                      </span>
+                      <span className={`text-xs font-bold ${meta.color}`}>
+                        {count}
+                      </span>
                     </div>
                     {/* Progress bar */}
                     {count > 0 && (
@@ -531,14 +610,18 @@ export default async function AdminDashboard() {
               );
             })}
             {activeStatuses.every((s) => (statusMap[s] ?? 0) === 0) && (
-              <p className="text-sm text-gray-400 py-4 text-center">No active orders</p>
+              <p className="text-sm text-gray-400 py-4 text-center">
+                No active orders
+              </p>
             )}
           </div>
 
           {(statusMap["CANCELLED"] ?? 0) > 0 && (
             <div className="mt-4 pt-3 border-t border-gray-50 flex items-center justify-between text-xs text-gray-400">
               <span>Cancelled orders</span>
-              <span className="font-semibold text-red-400">{statusMap["CANCELLED"]}</span>
+              <span className="font-semibold text-red-400">
+                {statusMap["CANCELLED"]}
+              </span>
             </div>
           )}
         </div>
@@ -557,17 +640,27 @@ export default async function AdminDashboard() {
 
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="bg-gray-50 rounded-xl p-3 text-center">
-              <p className="text-xl font-bold text-brown-dark">{products.length}</p>
+              <p className="text-xl font-bold text-brown-dark">
+                {products.length}
+              </p>
               <p className="text-[10px] text-gray-400 mt-0.5">Total</p>
             </div>
-            <div className={`rounded-xl p-3 text-center ${lowStock.length > 0 ? "bg-amber-50" : "bg-gray-50"}`}>
-              <p className={`text-xl font-bold ${lowStock.length > 0 ? "text-amber-600" : "text-gray-400"}`}>
+            <div
+              className={`rounded-xl p-3 text-center ${lowStock.length > 0 ? "bg-amber-50" : "bg-gray-50"}`}
+            >
+              <p
+                className={`text-xl font-bold ${lowStock.length > 0 ? "text-amber-600" : "text-gray-400"}`}
+              >
                 {lowStock.length}
               </p>
               <p className="text-[10px] text-gray-400 mt-0.5">Low Stock</p>
             </div>
-            <div className={`rounded-xl p-3 text-center ${outOfStock.length > 0 ? "bg-red-50" : "bg-gray-50"}`}>
-              <p className={`text-xl font-bold ${outOfStock.length > 0 ? "text-red-500" : "text-gray-400"}`}>
+            <div
+              className={`rounded-xl p-3 text-center ${outOfStock.length > 0 ? "bg-red-50" : "bg-gray-50"}`}
+            >
+              <p
+                className={`text-xl font-bold ${outOfStock.length > 0 ? "text-red-500" : "text-gray-400"}`}
+              >
                 {outOfStock.length}
               </p>
               <p className="text-[10px] text-gray-400 mt-0.5">Out of Stock</p>
@@ -577,10 +670,14 @@ export default async function AdminDashboard() {
           {lowStock.length > 0 ? (
             <div className="space-y-2">
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1">
-                <AlertTriangle size={11} className="text-amber-400" /> Low stock alerts
+                <AlertTriangle size={11} className="text-amber-400" /> Low stock
+                alerts
               </p>
               {lowStock.slice(0, 5).map((p) => (
-                <div key={p.id} className="flex items-center justify-between text-sm">
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between text-sm"
+                >
                   <Link
                     href={`/admin/products/${p.id}/edit`}
                     className="text-brown-dark hover:text-rose-gold transition-colors truncate flex-1 min-w-0 mr-2"
@@ -589,7 +686,9 @@ export default async function AdminDashboard() {
                   </Link>
                   <span
                     className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                      p.stockQty <= 1 ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"
+                      p.stockQty <= 1
+                        ? "bg-red-100 text-red-600"
+                        : "bg-amber-100 text-amber-700"
                     }`}
                   >
                     {p.stockQty} left
@@ -608,7 +707,9 @@ export default async function AdminDashboard() {
           ) : (
             <div className="text-center py-4">
               <CheckCircle2 size={28} className="text-green-300 mx-auto mb-2" />
-              <p className="text-xs text-gray-400">All products are well stocked</p>
+              <p className="text-xs text-gray-400">
+                All products are well stocked
+              </p>
             </div>
           )}
         </div>
@@ -619,7 +720,9 @@ export default async function AdminDashboard() {
         {/* Recent orders */}
         <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
-            <h3 className="font-semibold text-brown-dark text-sm">Recent Orders</h3>
+            <h3 className="font-semibold text-brown-dark text-sm">
+              Recent Orders
+            </h3>
             <Link
               href="/admin/orders"
               className="text-xs text-rose-gold hover:text-rose-gold-dark font-medium flex items-center gap-1"
@@ -637,22 +740,35 @@ export default async function AdminDashboard() {
               {recentFiveOrders.map((o) => {
                 const meta = ORDER_STATUS_META[o.status];
                 return (
-                  <div key={o.id} className="px-5 py-3.5 flex items-center gap-3 hover:bg-gray-50/50 transition-colors">
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${meta?.bg ?? "bg-gray-50"}`}>
-                      <ShoppingBag size={13} className={meta?.color ?? "text-gray-400"} />
+                  <div
+                    key={o.id}
+                    className="px-5 py-3.5 flex items-center gap-3 hover:bg-gray-50/50 transition-colors"
+                  >
+                    <div
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${meta?.bg ?? "bg-gray-50"}`}
+                    >
+                      <ShoppingBag
+                        size={13}
+                        className={meta?.color ?? "text-gray-400"}
+                      />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm font-semibold text-brown-dark">
                           {o.orderNumber}
                         </span>
-                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${meta?.bg} ${meta?.color}`}>
+                        <span
+                          className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${meta?.bg} ${meta?.color}`}
+                        >
                           {meta?.label ?? o.status}
                         </span>
                       </div>
                       <p className="text-xs text-gray-400 truncate">
                         {o.customer.name ?? "Customer"} ·{" "}
-                        {new Date(o.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                        {new Date(o.createdAt).toLocaleDateString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                        })}
                       </p>
                     </div>
                     <span className="text-sm font-bold text-brown-dark shrink-0">
@@ -668,7 +784,9 @@ export default async function AdminDashboard() {
         {/* Recent bills */}
         <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
-            <h3 className="font-semibold text-brown-dark text-sm">Recent Bills</h3>
+            <h3 className="font-semibold text-brown-dark text-sm">
+              Recent Bills
+            </h3>
             <Link
               href="/admin/billing"
               className="text-xs text-rose-gold hover:text-rose-gold-dark font-medium flex items-center gap-1"
@@ -686,14 +804,32 @@ export default async function AdminDashboard() {
               {recentFiveBills.map((b) => {
                 const statusStyle =
                   b.status === "PAID"
-                    ? { bg: "bg-green-50", color: "text-green-600", label: "Paid" }
+                    ? {
+                        bg: "bg-green-50",
+                        color: "text-green-600",
+                        label: "Paid",
+                      }
                     : b.status === "PARTIAL"
-                    ? { bg: "bg-yellow-50", color: "text-yellow-600", label: "Partial" }
-                    : { bg: "bg-red-50", color: "text-red-500", label: "Unpaid" };
-                const customerName = b.customer?.name ?? b.customerName ?? "Walk-in";
+                      ? {
+                          bg: "bg-yellow-50",
+                          color: "text-yellow-600",
+                          label: "Partial",
+                        }
+                      : {
+                          bg: "bg-red-50",
+                          color: "text-red-500",
+                          label: "Unpaid",
+                        };
+                const customerName =
+                  b.customer?.name ?? b.customerName ?? "Walk-in";
                 return (
-                  <div key={b.id} className="px-5 py-3.5 flex items-center gap-3 hover:bg-gray-50/50 transition-colors">
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${statusStyle.bg}`}>
+                  <div
+                    key={b.id}
+                    className="px-5 py-3.5 flex items-center gap-3 hover:bg-gray-50/50 transition-colors"
+                  >
+                    <div
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${statusStyle.bg}`}
+                    >
                       <Receipt size={13} className={statusStyle.color} />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -704,13 +840,18 @@ export default async function AdminDashboard() {
                         >
                           {b.billNumber}
                         </Link>
-                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${statusStyle.bg} ${statusStyle.color}`}>
+                        <span
+                          className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${statusStyle.bg} ${statusStyle.color}`}
+                        >
                           {statusStyle.label}
                         </span>
                       </div>
                       <p className="text-xs text-gray-400 truncate">
                         {customerName} ·{" "}
-                        {new Date(b.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                        {new Date(b.createdAt).toLocaleDateString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                        })}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
@@ -770,7 +911,9 @@ export default async function AdminDashboard() {
           <Tag size={20} className="text-blue-500 shrink-0" />
           <div>
             <p className="text-sm font-bold">Categories</p>
-            <p className="text-[11px] text-gray-400">{categories.length} active</p>
+            <p className="text-[11px] text-gray-400">
+              {categories.length} active
+            </p>
           </div>
         </Link>
       </div>

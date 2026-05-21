@@ -30,10 +30,17 @@ export async function generateMetadata({ searchParams }: Props) {
     ? `Shop handcrafted ${categoryName.toLowerCase()} at Shivam Jewellers. BIS Hallmark certified gold and silver pieces.`
     : "Browse our full collection of BIS Hallmark certified gold and silver jewellery — rings, necklaces, bangles, earrings and more.";
 
+  const canonicalUrl = params.category
+    ? `/products?category=${params.category}`
+    : params.metal
+    ? `/products?metal=${params.metal}`
+    : "/products";
+
   return {
     title,
     description,
-    openGraph: { title: `${title} | Shivam Jewellers`, description, url: "/products" },
+    alternates: { canonical: canonicalUrl },
+    openGraph: { title: `${title} | Shivam Jewellers`, description, url: canonicalUrl },
   };
 }
 

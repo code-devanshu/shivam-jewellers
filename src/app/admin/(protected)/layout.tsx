@@ -1,9 +1,16 @@
 import type { Metadata } from "next";
+import { Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import Sidebar from "@/components/admin/Sidebar";
 import { Toaster } from "sonner";
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: { default: "Admin", template: "%s | Admin" },
@@ -20,7 +27,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className={`flex min-h-screen bg-gray-50 ${geistMono.variable}`}>
       <Sidebar />
       <main className="flex-1 overflow-auto">{children}</main>
       <Toaster position="top-right" richColors />

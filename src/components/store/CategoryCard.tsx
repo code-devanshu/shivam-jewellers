@@ -2,9 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Category } from "@/lib/types";
 
-type Props = { category: Category };
+type Props = { category: Category; priority?: boolean };
 
-export default function CategoryCard({ category }: Props) {
+export default function CategoryCard({ category, priority = false }: Props) {
   return (
     <Link href={`/products?category=${category.slug}`} className="group block">
       <div className="relative aspect-square rounded-2xl overflow-hidden border border-rose-gold-light/30 shadow-sm hover:shadow-md transition-all duration-200">
@@ -15,6 +15,7 @@ export default function CategoryCard({ category }: Props) {
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+            priority={priority}
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-blush to-rose-gold-light/30 flex items-center justify-center text-3xl text-rose-gold">

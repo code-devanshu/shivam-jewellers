@@ -1,10 +1,16 @@
 import { notFound } from "next/navigation";
-import { getProductBySlug, getCurrentRates } from "@/lib/data";
+import { getProductBySlug, getCurrentRates, getAllProducts } from "@/lib/data";
 import { getCustomerSession } from "@/lib/customer-auth";
 import { getWishlistedProductIds } from "@/lib/customer-store";
+import { calculatePrice } from "@/lib/price";
 import ProductDetail from "@/components/store/ProductDetail";
 
 type Props = { params: Promise<{ slug: string }> };
+
+export async function generateStaticParams() {
+  const products = await getAllProducts();
+  return products.filter((p) => p.isAvailable).map((p) => ({ slug: p.slug }));
+}
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
@@ -20,6 +26,7 @@ export async function generateMetadata({ params }: Props) {
   return {
     title: product.name,
     description,
+    alternates: { canonical: `/products/${slug}` },
     openGraph: {
       title: `${product.name} | Shivam Jewellers`,
       description,
@@ -56,12 +63,41 @@ export default async function ProductPage({ params }: Props) {
     isWishlisted = ids.includes(product.id);
   }
 
+  const { totalPrice } = calculatePrice(product, ratePerGram);
+
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description:
+      product.description ??
+      `BIS Hallmark certified ${product.metal.name} jewellery from Shivam Jewellers.`,
+    image: product.images.map((img) => img.url),
+    brand: { "@type": "Brand", name: "Shivam Jewellers" },
+    material: product.metal.name,
+    offers: {
+      "@type": "Offer",
+      availability: product.isAvailable
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+      priceCurrency: "INR",
+      price: totalPrice,
+      seller: { "@type": "Organization", name: "Shivam Jewellers" },
+    },
+  };
+
   return (
-    <ProductDetail
-      product={product}
-      ratePerGram={ratePerGram}
-      customerId={customerId}
-      isWishlisted={isWishlisted}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+      <ProductDetail
+        product={product}
+        ratePerGram={ratePerGram}
+        customerId={customerId}
+        isWishlisted={isWishlisted}
+      />
+    </>
   );
 }

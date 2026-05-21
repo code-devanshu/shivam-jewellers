@@ -10,6 +10,7 @@ export const metadata = {
     description:
       "Reach us at our store in Deoria, UP — call, WhatsApp, or fill out the enquiry form.",
     url: "/contact",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Shivam Jewellers" }],
   },
 };
 

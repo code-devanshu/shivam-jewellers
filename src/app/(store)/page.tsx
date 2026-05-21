@@ -4,15 +4,21 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Handcrafted Gold & Silver Jewellery",
   description:
-    "Shop BIS Hallmark certified gold and silver jewellery handcrafted in Deoria, UP. Rings, necklaces, bangles, earrings and more — 30+ years of trusted craftsmanship.",
+    "Shop BIS Hallmark certified gold and silver jewellery handcrafted in Deoria, UP. Rings, necklaces, bangles, earrings and more — 30+ years of craftsmanship.",
   openGraph: {
     title: "Shivam Jewellers — Handcrafted Gold & Silver Jewellery",
     description:
       "BIS Hallmark certified jewellery. Shop rings, necklaces, bangles and more from Shivam Jewellers, Deoria.",
     url: "/",
     type: "website",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Shivam Jewellers" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/og-image.png"],
   },
 };
+
 import { ArrowRight, ShieldCheck, Star, Truck } from "lucide-react";
 import { getCategories, getFeaturedProducts, getCurrentRates } from "@/lib/data";
 import { getCustomerSession } from "@/lib/customer-auth";
@@ -20,6 +26,54 @@ import { getWishlistedProductIds } from "@/lib/customer-store";
 import ProductCard from "@/components/store/ProductCard";
 import CategoryCard from "@/components/store/CategoryCard";
 import HeroSection from "@/components/store/HeroSection";
+
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+const localBusinessJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "JewelryStore",
+  name: "Shivam Jewellers",
+  url: siteUrl,
+  telephone: "+918808011114",
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "Jamuna Gali, Malviya Rd, Pathar Deva, Raghav Nagar",
+    addressLocality: "Deoria",
+    addressRegion: "Uttar Pradesh",
+    postalCode: "274806",
+    addressCountry: "IN",
+  },
+  openingHoursSpecification: [
+    {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+      opens: "10:00",
+      closes: "20:00",
+    },
+    {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: "Sunday",
+      opens: "11:00",
+      closes: "18:00",
+    },
+  ],
+  priceRange: "₹₹",
+};
+
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Shivam Jewellers",
+  url: siteUrl,
+  potentialAction: {
+    "@type": "SearchAction",
+    target: {
+      "@type": "EntryPoint",
+      urlTemplate: `${siteUrl}/products?q={search_term_string}`,
+    },
+    "query-input": "required name=search_term_string",
+  },
+};
 
 export default async function HomePage() {
   const customerId = await getCustomerSession();
@@ -35,6 +89,15 @@ export default async function HomePage() {
 
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+      />
+
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <HeroSection categories={categories} featured={featured} />
 
@@ -59,8 +122,8 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {categories.map((cat) => (
-              <CategoryCard key={cat.id} category={cat} />
+            {categories.map((cat, idx) => (
+              <CategoryCard key={cat.id} category={cat} priority={idx < 2} />
             ))}
           </div>
         </div>
@@ -87,12 +150,13 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featured.map((product) => (
+            {featured.map((product, idx) => (
               <ProductCard
                 key={product.id}
                 product={product}
                 ratePerGram={rateMap[product.metalId] ?? 0}
                 isWishlisted={wishlistedIds.includes(product.id)}
+                priority={idx < 2}
               />
             ))}
           </div>
@@ -124,7 +188,7 @@ export default async function HomePage() {
                 30+ Years of Trust
               </h3>
               <p className="text-sm text-brown/60 leading-relaxed max-w-xs">
-                Serving families across Mumbai since 1995 with authentic
+                Serving families across Deoria since 1995 with authentic
                 craftsmanship and fair pricing.
               </p>
             </div>
