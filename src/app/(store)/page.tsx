@@ -27,7 +27,7 @@ import ProductCard from "@/components/store/ProductCard";
 import CategoryCard from "@/components/store/CategoryCard";
 import HeroSection from "@/components/store/HeroSection";
 
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://localhost:3000";
 
 const localBusinessJsonLd = {
   "@context": "https://schema.org",

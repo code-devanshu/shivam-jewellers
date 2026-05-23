@@ -32,7 +32,7 @@ export default function Sidebar() {
     exact ? pathname === href : pathname.startsWith(href);
 
   return (
-    <aside className="w-60 shrink-0 bg-brown-dark min-h-screen flex flex-col">
+    <aside className="w-60 shrink-0 bg-brown-dark h-full flex flex-col overflow-y-auto">
       {/* Logo */}
       <div className="px-6 py-5 border-b border-white/10">
         <div className="text-base font-serif font-bold text-cream">Shivam Jewellers</div>

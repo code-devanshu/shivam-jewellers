@@ -14,6 +14,16 @@ function verifyToken(cookieValue: string): boolean {
 }
 
 export function proxy(request: NextRequest) {
+  // Force HTTPS in production (Vercel sets x-forwarded-proto)
+  if (
+    process.env.NODE_ENV === "production" &&
+    request.headers.get("x-forwarded-proto") === "http"
+  ) {
+    const url = request.nextUrl.clone();
+    url.protocol = "https:";
+    return NextResponse.redirect(url, { status: 301 });
+  }
+
   const path = request.nextUrl.pathname;
 
   if (!path.startsWith("/admin")) return NextResponse.next();
@@ -28,5 +38,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
