@@ -7,6 +7,7 @@ import {
   storeDeleteCategory,
   storeGetAllCategories,
 } from "@/lib/admin-store";
+import { db } from "@/lib/db";
 
 export type CategoryFormState =
   | { status: "idle" }
@@ -31,6 +32,7 @@ export async function createCategory(
   const name = (formData.get("name") as string)?.trim();
   const description = (formData.get("description") as string)?.trim() || null;
   const imageUrl = (formData.get("imageUrl") as string)?.trim() || null;
+  const imageUrls: string[] = JSON.parse((formData.get("imageUrls") as string) || "[]");
   const order = parseInt(formData.get("order") as string) || 0;
   const showInNav = formData.get("showInNav") === "on";
 
@@ -41,7 +43,7 @@ export async function createCategory(
   const existing = categories.find((c) => c.slug === slug);
   if (existing) return { status: "error", message: "A category with this name already exists." };
 
-  await storeAddCategory({ id: `cat-${Date.now()}`, name, slug, description, imageUrl, order, showInNav });
+  await storeAddCategory({ id: `cat-${Date.now()}`, name, slug, description, imageUrl, imageUrls, order, showInNav });
   revalidateAll();
 
   return { status: "success", message: `Category "${name}" added.` };
@@ -55,13 +57,14 @@ export async function updateCategory(
   const name = (formData.get("name") as string)?.trim();
   const description = (formData.get("description") as string)?.trim() || null;
   const imageUrl = (formData.get("imageUrl") as string)?.trim() || null;
+  const imageUrls: string[] = JSON.parse((formData.get("imageUrls") as string) || "[]");
   const order = parseInt(formData.get("order") as string) || 0;
   const slug = (formData.get("slug") as string)?.trim() || slugify(name);
   const showInNav = formData.get("showInNav") === "on";
 
   if (!name) return { status: "error", message: "Name is required." };
 
-  await storeUpdateCategory(id, { name, slug, description, imageUrl, order, showInNav });
+  await storeUpdateCategory(id, { name, slug, description, imageUrl, imageUrls, order, showInNav });
   revalidateAll();
 
   return { status: "success", message: `Category "${name}" updated.` };
@@ -72,4 +75,16 @@ export async function deleteCategory(formData: FormData): Promise<void> {
   if (!id) return;
   await storeDeleteCategory(id);
   revalidateAll();
+}
+
+export async function getCategoryProductImages(
+  categoryId: string
+): Promise<Array<{ url: string; productName: string }>> {
+  const images = await db.productImage.findMany({
+    where: { product: { categoryId } },
+    include: { product: { select: { name: true } } },
+    orderBy: [{ isPrimary: "desc" }, { order: "asc" }],
+    take: 60,
+  });
+  return images.map((img) => ({ url: img.url, productName: img.product.name }));
 }

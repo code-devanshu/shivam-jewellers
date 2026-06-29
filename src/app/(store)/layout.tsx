@@ -3,7 +3,7 @@ import Navbar from "@/components/store/Navbar";
 import Footer from "@/components/store/Footer";
 import RateBanner from "@/components/store/RateBanner";
 import { Toaster } from "sonner";
-import { getCurrentRates, getCategories } from "@/lib/data";
+import { getCurrentRates, getCategories, getFeaturedProducts } from "@/lib/data";
 import { getCustomerSession } from "@/lib/customer-auth";
 import NavbarWithCounts from "./NavbarWrapper";
 
@@ -13,7 +13,11 @@ export default async function StoreLayout({
   children: React.ReactNode;
 }) {
   const customerId = await getCustomerSession();
-  const [rates, categories] = await Promise.all([getCurrentRates(), getCategories()]);
+  const [rates, categories, featuredProducts] = await Promise.all([
+    getCurrentRates(),
+    getCategories(),
+    getFeaturedProducts(),
+  ]);
 
   return (
     <>
@@ -22,13 +26,14 @@ export default async function StoreLayout({
         fallback={
           <Navbar
             categories={categories}
+            trendingProducts={[]}
             cartCount={0}
             wishlistCount={0}
             isLoggedIn={!!customerId}
           />
         }
       >
-        <NavbarWithCounts categories={categories} customerId={customerId} />
+        <NavbarWithCounts categories={categories} trendingProducts={featuredProducts} customerId={customerId} />
       </Suspense>
       <main className="flex-1 bg-background">{children}</main>
       <Footer />

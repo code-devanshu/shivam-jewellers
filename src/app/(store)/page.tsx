@@ -24,7 +24,7 @@ import { getCategories, getFeaturedProducts, getCurrentRates } from "@/lib/data"
 import { getCustomerSession } from "@/lib/customer-auth";
 import { getWishlistedProductIds } from "@/lib/customer-store";
 import ProductCard from "@/components/store/ProductCard";
-import CategoryCard from "@/components/store/CategoryCard";
+import CategoryCarousel from "@/components/store/CategoryCarousel";
 import HeroSection from "@/components/store/HeroSection";
 
 const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://localhost:3000";
@@ -99,7 +99,7 @@ export default async function HomePage() {
       />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <HeroSection categories={categories} featured={featured} />
+      <HeroSection categories={categories} />
 
       {/* ── Shop by Category ─────────────────────────────────────────────── */}
       <section className="py-16 bg-cream">
@@ -121,11 +121,7 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {categories.map((cat, idx) => (
-              <CategoryCard key={cat.id} category={cat} priority={idx < 2} />
-            ))}
-          </div>
+          <CategoryCarousel categories={categories} />
         </div>
       </section>
 

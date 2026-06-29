@@ -19,6 +19,7 @@ export type Category = {
   slug: string;
   description: string | null;
   imageUrl: string | null;
+  imageUrls: string[];
   order: number;
   showInNav: boolean;
 };

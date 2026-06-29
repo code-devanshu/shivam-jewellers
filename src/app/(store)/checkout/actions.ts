@@ -405,6 +405,7 @@ export async function verifyAndConfirmPayment(params: {
   revalidatePath("/cart");
 
   for (const item of order.items) {
+    if (!item.productId) continue;
     const updated = await db.product.update({
       where: { id: item.productId },
       data: { stockQty: { decrement: item.quantity } },

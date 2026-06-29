@@ -134,6 +134,7 @@ export async function storeAddCategory(category: Category): Promise<void> {
       slug: category.slug,
       description: category.description,
       imageUrl: category.imageUrl,
+      imageUrls: category.imageUrls,
       order: category.order,
       showInNav: category.showInNav,
     },
@@ -266,6 +267,7 @@ function mapCategory(row: DbCategory): Category {
     slug: row.slug,
     description: row.description,
     imageUrl: row.imageUrl,
+    imageUrls: row.imageUrls ?? [],
     order: row.order,
     showInNav: row.showInNav,
   };

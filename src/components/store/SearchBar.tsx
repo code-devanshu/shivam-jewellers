@@ -10,6 +10,7 @@ import type { Category, Product } from "@/lib/types";
 type Props = {
   categories: Category[];
   trendingProducts: Product[];
+  variant?: "hero" | "navbar";
 };
 
 const PLACEHOLDER_TERMS = [
@@ -22,7 +23,8 @@ const PLACEHOLDER_TERMS = [
   "chains",
 ];
 
-export default function SearchBar({ categories, trendingProducts }: Props) {
+export default function SearchBar({ categories, trendingProducts, variant = "hero" }: Props) {
+  const isNavbar = variant === "navbar";
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [phIndex, setPhIndex] = useState(0);
@@ -72,32 +74,43 @@ export default function SearchBar({ categories, trendingProducts }: Props) {
   const trending = trendingProducts.slice(0, 3);
 
   return (
-    <div ref={containerRef} className="relative w-full max-w-2xl mx-auto">
+    <div ref={containerRef} className={isNavbar ? "relative w-full" : "relative w-full max-w-2xl mx-auto"}>
       <form onSubmit={handleSubmit}>
-        <div className="relative overflow-hidden rounded-full bg-white/95 backdrop-blur-sm border border-white/60 shadow-xl focus-within:ring-2 focus-within:ring-rose-gold/40">
-          <style>{`
-            @keyframes sb-ph-in {
-              from { opacity: 0; transform: translateY(7px); }
-              to   { opacity: 1; transform: translateY(0);   }
-            }
-            .sb-ph-term { animation: sb-ph-in 0.35s ease both; }
-          `}</style>
+        <div className={isNavbar
+          ? "relative overflow-hidden rounded-full bg-gray-50 border border-gray-200 focus-within:border-rose-gold focus-within:ring-1 focus-within:ring-rose-gold focus-within:bg-white transition-colors"
+          : "relative overflow-hidden rounded-full bg-white/95 backdrop-blur-sm border border-white/60 shadow-xl focus-within:ring-2 focus-within:ring-rose-gold/40"
+        }>
+          {!isNavbar && (
+            <style>{`
+              @keyframes sb-ph-in {
+                from { opacity: 0; transform: translateY(7px); }
+                to   { opacity: 1; transform: translateY(0);   }
+              }
+              .sb-ph-term { animation: sb-ph-in 0.35s ease both; }
+            `}</style>
+          )}
 
           <Search
-            className="absolute left-5 top-1/2 -translate-y-1/2 text-brown/50 pointer-events-none z-10"
-            size={18}
+            className={isNavbar
+              ? "absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10"
+              : "absolute left-5 top-1/2 -translate-y-1/2 text-brown/50 pointer-events-none z-10"
+            }
+            size={isNavbar ? 15 : 18}
           />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setOpen(true)}
             onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
-            placeholder=""
-            className="w-full pl-12 pr-5 py-4 bg-transparent text-brown focus:outline-none text-sm relative z-10"
+            placeholder={isNavbar ? "Search for jewellery…" : ""}
+            className={isNavbar
+              ? "w-full pl-10 pr-4 py-2.5 bg-transparent text-brown-dark placeholder-gray-400 focus:outline-none text-sm relative z-10"
+              : "w-full pl-12 pr-5 py-4 bg-transparent text-brown focus:outline-none text-sm relative z-10"
+            }
           />
 
-          {/* Animated placeholder — visible only when input is empty */}
-          {!query && (
+          {/* Animated placeholder — hero variant only, visible when input is empty */}
+          {!isNavbar && !query && (
             <div className="pointer-events-none absolute inset-0 flex items-center pl-12 pr-5 z-0">
               <span className="text-sm text-brown/40 flex items-center whitespace-nowrap">
                 Search for&nbsp;
@@ -111,7 +124,7 @@ export default function SearchBar({ categories, trendingProducts }: Props) {
       </form>
 
       {open && (
-        <div className="absolute top-full mt-3 w-full bg-white rounded-2xl shadow-2xl border border-blush/60 overflow-hidden z-50">
+        <div className={`absolute top-full ${isNavbar ? "mt-1" : "mt-3"} w-full bg-white rounded-2xl shadow-2xl border border-blush/60 overflow-hidden z-50`}>
           {/* Popular Searches */}
           <div className="px-5 pt-5 pb-4 border-b border-blush/40">
             <p className="text-[11px] font-semibold text-brown/40 uppercase tracking-[0.15em] mb-3">
