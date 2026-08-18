@@ -21,6 +21,48 @@ export async function storeGetFeaturedProducts(): Promise<Product[]> {
   return rows.map(mapProduct);
 }
 
+export type AdminProductStatusFilter = "ALL" | "ACTIVE" | "HIDDEN" | "FEATURED" | "LOW_STOCK";
+
+export async function adminGetProductsPage(
+  filters: { status: AdminProductStatusFilter; metalId?: string; query?: string },
+  pagination: { skip: number; take: number },
+): Promise<{ products: Product[]; totalCount: number }> {
+  const where = {
+    ...(filters.status === "ACTIVE" ? { isAvailable: true } : {}),
+    ...(filters.status === "HIDDEN" ? { isAvailable: false } : {}),
+    ...(filters.status === "FEATURED" ? { isFeatured: true } : {}),
+    ...(filters.status === "LOW_STOCK" ? { stockQty: { lte: 3 } } : {}),
+    ...(filters.metalId ? { metalId: filters.metalId } : {}),
+    ...(filters.query
+      ? {
+          OR: [
+            { name: { contains: filters.query, mode: "insensitive" as const } },
+            { category: { name: { contains: filters.query, mode: "insensitive" as const } } },
+            { metal: { name: { contains: filters.query, mode: "insensitive" as const } } },
+            { purity: { contains: filters.query, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+  };
+
+  const [rows, totalCount] = await Promise.all([
+    db.product.findMany({
+      where,
+      include: { category: true, metal: true, images: true, variants: true },
+      orderBy: { createdAt: "desc" },
+      skip: pagination.skip,
+      take: pagination.take,
+    }),
+    db.product.count({ where }),
+  ]);
+
+  return { products: rows.map(mapProduct), totalCount };
+}
+
+export async function storeGetMetals(): Promise<{ id: string; name: string }[]> {
+  return db.metal.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } });
+}
+
 export async function storeGetProductsPage(
   filters: {
     categoryId?: string;

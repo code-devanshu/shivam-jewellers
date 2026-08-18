@@ -12,12 +12,14 @@ import {
   ShoppingBag,
   Tag,
   TrendingUp,
+  Users,
 } from "lucide-react";
 import { adminLogout } from "@/app/admin/login/actions";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+  { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/billing", label: "Billing", icon: Receipt },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/rates", label: "Metal Rates", icon: TrendingUp },

@@ -1,15 +1,34 @@
-import Link from "next/link";
-import { Plus } from "lucide-react";
-import { storeGetAllProducts } from "@/lib/admin-store";
+import { adminGetProductsPage, storeGetMetals, type AdminProductStatusFilter } from "@/lib/admin-store";
 import { getLiveRates } from "@/lib/live-rates";
 import { calculatePrice } from "@/lib/price";
+import { db } from "@/lib/db";
+import ProductsBrowser from "./ProductsBrowser";
 import ProductsTable, { type ProductRow } from "./ProductsTable";
 
 export const metadata = { title: "Products" };
 
-export default async function AdminProductsPage() {
-  const [products, rates] = await Promise.all([
-    storeGetAllProducts(),
+const PAGE_SIZE = 20;
+const STATUS_VALUES: AdminProductStatusFilter[] = ["ALL", "ACTIVE", "HIDDEN", "FEATURED", "LOW_STOCK"];
+
+export default async function AdminProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; status?: string; metal?: string; page?: string }>;
+}) {
+  const { q, status: statusParam, metal, page: pageParam } = await searchParams;
+  const status = STATUS_VALUES.includes(statusParam as AdminProductStatusFilter)
+    ? (statusParam as AdminProductStatusFilter)
+    : "ALL";
+  const query = q?.trim() || undefined;
+  const page = Math.max(1, Number(pageParam) || 1);
+
+  const [{ products, totalCount: filteredCount }, allMetals, allProductsCount, rates] = await Promise.all([
+    adminGetProductsPage(
+      { status, metalId: metal, query },
+      { skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE },
+    ),
+    storeGetMetals(),
+    db.product.count(),
     getLiveRates(),
   ]);
 
@@ -33,22 +52,22 @@ export default async function AdminProductsPage() {
     };
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredCount / PAGE_SIZE));
+  const hasFilters = Boolean(query) || status !== "ALL" || Boolean(metal);
+
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-serif font-bold text-brown-dark">Products</h1>
-          <p className="text-sm text-gray-400 mt-1">{products.length} total</p>
-        </div>
-        <Link
-          href="/admin/products/new"
-          className="flex items-center gap-2 bg-rose-gold hover:bg-rose-gold-dark text-white px-5 py-2.5 rounded-full font-semibold text-sm transition-colors"
-        >
-          <Plus size={16} /> Add Product
-        </Link>
-      </div>
-
-      <ProductsTable products={rows} />
+      <ProductsBrowser
+        query={q ?? ""}
+        status={status}
+        metal={metal ?? "ALL"}
+        metals={allMetals}
+        page={page}
+        totalPages={totalPages}
+        totalCount={allProductsCount}
+      >
+        <ProductsTable products={rows} filteredCount={filteredCount} hasFilters={hasFilters} />
+      </ProductsBrowser>
     </div>
   );
 }
