@@ -1,75 +1,75 @@
 "use server";
 
-import { createHash, randomInt } from "crypto";
+import { randomInt, timingSafeEqual } from "crypto";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { setCustomerSession, clearCustomerSession } from "@/lib/customer-auth";
-import { sendOtpEmail } from "@/lib/resend";
+import { isValidIndianPhone, normalizePhone } from "@/lib/phone";
+import { sendPhoneOtp } from "@/lib/otp-dispatch";
 
-const BYPASS_EMAILS = [
-  "admin.devanshu@shivamjewellers.com",
-  "admin.vaibhav@shivamjewellers.com",
-];
+const MAX_ATTEMPTS = 5;
 
-function emailToId(email: string): string {
-  const h = createHash("sha256").update(email).digest("hex");
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+function codesMatch(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
 }
 
-function isValidEmail(raw: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw.trim());
-}
-
-export async function bypassLogin(
-  email: string,
-  next = "/"
-): Promise<{ error: string } | never> {
-  const normalized = email.toLowerCase().trim();
-  if (!BYPASS_EMAILS.includes(normalized)) {
-    return { error: "Not authorized." };
-  }
-  const customerId = emailToId(normalized);
-  await db.customer.upsert({
-    where: { id: customerId },
-    update: { email: normalized },
-    create: { id: customerId, email: normalized },
-  });
-  await setCustomerSession(customerId);
-  redirect(next);
-}
+// Dev-only escape hatch while WhatsApp/MSG91 template approvals are pending — see
+// tech_phone_otp_migration memory. Requires an explicit opt-in env var AND non-production
+// so it can never activate accidentally in prod.
+const OTP_DEV_BYPASS =
+  process.env.NODE_ENV !== "production" && process.env.OTP_DEV_BYPASS === "true";
 
 export async function sendOtp(
-  rawEmail: string,
-): Promise<{ error: string } | { ok: true }> {
-  const email = rawEmail.trim().toLowerCase();
-  if (!isValidEmail(email)) return { error: "Enter a valid email address." };
+  rawPhone: string,
+): Promise<{ error: string } | { ok: true; devCode?: string }> {
+  if (!isValidIndianPhone(rawPhone)) {
+    return { error: "Enter a valid 10-digit phone number." };
+  }
+  const phone = normalizePhone(rawPhone);
 
   // 60-second cooldown to prevent abuse
   const recent = await db.customerOtp.findFirst({
-    where: { email, createdAt: { gt: new Date(Date.now() - 60_000) } },
+    where: { phone, createdAt: { gt: new Date(Date.now() - 60_000) } },
   });
   if (recent) return { error: "Please wait 60 seconds before requesting another OTP." };
 
   const code = String(randomInt(100000, 999999));
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-  await db.customerOtp.deleteMany({ where: { email } });
-  await db.customerOtp.create({ data: { email, code, expiresAt } });
-  await sendOtpEmail(email, code);
+  await db.customerOtp.deleteMany({ where: { phone } });
+  await db.customerOtp.create({ data: { phone, code, expiresAt } });
+
+  if (OTP_DEV_BYPASS) {
+    console.log(`[otp-dev-bypass] ${phone} -> ${code}`);
+    return { ok: true, devCode: code };
+  }
+
+  try {
+    await sendPhoneOtp(phone, code);
+  } catch (err) {
+    console.error("[sendOtp] failed to dispatch OTP:", err);
+    await db.customerOtp.deleteMany({ where: { phone } });
+    return { error: "Couldn't send OTP. Please try again." };
+  }
 
   return { ok: true };
 }
 
 export async function verifyOtp(
-  rawEmail: string,
+  rawPhone: string,
   code: string,
   next = "/",
 ): Promise<{ error: string } | never> {
-  const email = rawEmail.trim().toLowerCase();
-  if (!isValidEmail(email)) return { error: "Invalid email address." };
+  if (!isValidIndianPhone(rawPhone)) {
+    return { error: "Invalid phone number." };
+  }
+  const phone = normalizePhone(rawPhone);
 
   const record = await db.customerOtp.findFirst({
-    where: { email },
+    where: { phone },
     orderBy: { createdAt: "desc" },
   });
 
@@ -78,14 +78,23 @@ export async function verifyOtp(
     await db.customerOtp.delete({ where: { id: record.id } });
     return { error: "OTP has expired. Please request a new one." };
   }
-  if (record.code !== code) return { error: "Incorrect OTP. Please try again." };
+
+  if (!codesMatch(record.code, code)) {
+    const attempts = record.attempts + 1;
+    if (attempts >= MAX_ATTEMPTS) {
+      await db.customerOtp.delete({ where: { id: record.id } });
+      return { error: "Too many incorrect attempts. Please request a new OTP." };
+    }
+    await db.customerOtp.update({ where: { id: record.id }, data: { attempts } });
+    return { error: "Incorrect OTP. Please try again." };
+  }
 
   await db.customerOtp.delete({ where: { id: record.id } });
 
   const customer = await db.customer.upsert({
-    where: { email },
+    where: { phone },
     update: {},
-    create: { email },
+    create: { phone },
   });
 
   await setCustomerSession(customer.id);

@@ -76,6 +76,8 @@ export default function ProductImageGallery({ images, productName }: Props) {
                   fill
                   className="object-cover"
                   sizes="72px"
+                  loading="lazy"
+                  fetchPriority="low"
                 />
               </button>
             ))}

@@ -60,6 +60,23 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum ShipmentStatus {
+  MANIFESTED
+  NOT_PICKED
+  PICKED_UP
+  IN_TRANSIT
+  PENDING
+  DISPATCHED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  RTO_INITIATED
+  RTO_IN_TRANSIT
+  RTO_DELIVERED
+  CANCELLED
+  LOST
+  UNKNOWN
+}
+
 // ─── Metal & Rates ────────────────────────────────────────────────────────────
 
 model Metal {
@@ -170,12 +187,13 @@ model ProductVariant {
 
 model CustomerOtp {
   id        String   @id @default(cuid())
-  email     String
+  phone     String
   code      String
+  attempts  Int      @default(0)
   expiresAt DateTime
   createdAt DateTime @default(now())
 
-  @@index([email])
+  @@index([phone])
 }
 
 model Customer {
@@ -272,7 +290,9 @@ model Order {
   items              OrderItem[]
   subtotal           Decimal              @db.Decimal(10, 2)
   gstAmount          Decimal              @db.Decimal(10, 2)
+  shippingCharge     Decimal?             @db.Decimal(10, 2)
   totalAmount        Decimal              @db.Decimal(10, 2)
+  estimatedDeliveryDate DateTime?
   notes              String?
   goldRateAtOrder    Decimal?             @db.Decimal(10, 2)
   silverRateAtOrder  Decimal?             @db.Decimal(10, 2)
@@ -281,6 +301,7 @@ model Order {
   razorpayOrderId    String?              // Razorpay order ID (before payment)
   paymentId          String?              // Razorpay payment ID (after success)
   invoice            Invoice?
+  shipment           Shipment?
   statusHistory      OrderStatusHistory[]
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
@@ -324,6 +345,45 @@ model OrderStatusHistory {
   createdAt DateTime    @default(now())
 
   @@index([orderId])
+}
+
+model Shipment {
+  id                String          @id @default(cuid())
+  orderId           String          @unique
+  order             Order           @relation(fields: [orderId], references: [id])
+  waybill           String          @unique
+  courierName       String          @default("Delhivery")
+  status            ShipmentStatus  @default(MANIFESTED)
+  trackingUrl       String?
+  pickupLocation    String?
+  pickupScheduledAt DateTime?
+  shippedAt         DateTime?
+  deliveredAt       DateTime?
+  weightGrams       Int?
+  dimensionsCm      String?
+  rawCreateResponse Json?
+  events            ShipmentEvent[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([orderId])
+  @@index([waybill])
+}
+
+model ShipmentEvent {
+  id           String         @id @default(cuid())
+  shipmentId   String
+  shipment     Shipment       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  status       ShipmentStatus
+  statusType   String?
+  instructions String?
+  location     String?
+  scannedAt    DateTime
+  rawPayload   Json?
+  createdAt    DateTime       @default(now())
+
+  @@unique([shipmentId, status, scannedAt])
+  @@index([shipmentId])
 }
 
 model Invoice {

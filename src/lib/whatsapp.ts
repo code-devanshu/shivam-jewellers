@@ -32,6 +32,12 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<void>
             type: "body",
             parameters: [{ type: "text", text: otp }],
           },
+          {
+            type: "button",
+            sub_type: "url",
+            index: 0,
+            parameters: [{ type: "text", text: otp }],
+          },
         ],
       },
     }),

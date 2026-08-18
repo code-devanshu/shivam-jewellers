@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { addToCart } from "@/app/(store)/cart/actions";
 import { toggleWishlist } from "@/app/(store)/wishlist/actions";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { useAuthModal } from "@/components/store/AuthModalProvider";
 
 type Props = {
   product: Product;
@@ -33,6 +34,7 @@ export default function ProductDetail({
   isWishlisted: initialWishlisted,
 }: Props) {
   const router = useRouter();
+  const { openAuthModal } = useAuthModal();
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
     product.variants[0] ?? null
   );
@@ -60,7 +62,7 @@ export default function ProductDetail({
 
   const handleAddToCart = () => {
     if (!customerId) {
-      router.push(`/auth?next=/products/${product.slug}`);
+      openAuthModal(`/products/${product.slug}`);
       return;
     }
     setCartState("adding");
@@ -78,7 +80,7 @@ export default function ProductDetail({
 
   const handleBuyNow = () => {
     if (!customerId) {
-      router.push(`/auth?next=/products/${product.slug}`);
+      openAuthModal(`/products/${product.slug}`);
       return;
     }
     setBuyState("pending");
@@ -95,7 +97,7 @@ export default function ProductDetail({
 
   const handleToggleWishlist = () => {
     if (!customerId) {
-      router.push(`/auth?next=/products/${product.slug}`);
+      openAuthModal(`/products/${product.slug}`);
       return;
     }
     const next = !wishlisted;

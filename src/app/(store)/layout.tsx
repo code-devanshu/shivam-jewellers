@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Navbar from "@/components/store/Navbar";
 import Footer from "@/components/store/Footer";
 import RateBanner from "@/components/store/RateBanner";
+import AuthModalProvider from "@/components/store/AuthModalProvider";
 import { Toaster } from "sonner";
 import { getCurrentRates, getCategories, getFeaturedProducts } from "@/lib/data";
 import { getCustomerSession } from "@/lib/customer-auth";
@@ -20,7 +21,7 @@ export default async function StoreLayout({
   ]);
 
   return (
-    <>
+    <AuthModalProvider isLoggedIn={!!customerId}>
       <RateBanner rates={rates} />
       <Suspense
         fallback={
@@ -38,6 +39,6 @@ export default async function StoreLayout({
       <main className="flex-1 bg-background">{children}</main>
       <Footer />
       <Toaster position="bottom-center" richColors />
-    </>
+    </AuthModalProvider>
   );
 }

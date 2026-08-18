@@ -1,5 +1,7 @@
 function Pulse({ className }: { className: string }) {
-  return <div className={`animate-pulse rounded-xl bg-blush/70 ${className}`} />;
+  return (
+    <div className={`animate-pulse rounded-xl bg-blush/70 ${className}`} />
+  );
 }
 
 function ProductCardSkeleton() {
@@ -30,7 +32,10 @@ export default function HomeLoading() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="rounded-2xl overflow-hidden border border-blush bg-white">
+              <div
+                key={i}
+                className="rounded-2xl overflow-hidden border border-blush bg-white"
+              >
                 <div className="aspect-square bg-blush/50 animate-pulse" />
                 <div className="p-3">
                   <Pulse className="h-4 w-3/4 mx-auto" />

@@ -21,6 +21,43 @@ export async function storeGetFeaturedProducts(): Promise<Product[]> {
   return rows.map(mapProduct);
 }
 
+export async function storeGetProductsPage(
+  filters: {
+    categoryId?: string;
+    metalId?: string;
+    featured?: boolean;
+    query?: string;
+  },
+  pagination: { skip: number; take: number },
+): Promise<{ products: Product[]; hasMore: boolean }> {
+  const where = {
+    isAvailable: true,
+    ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
+    ...(filters.metalId ? { metalId: filters.metalId } : {}),
+    ...(filters.featured ? { isFeatured: true } : {}),
+    ...(filters.query
+      ? {
+          OR: [
+            { name: { contains: filters.query, mode: "insensitive" as const } },
+            { category: { name: { contains: filters.query, mode: "insensitive" as const } } },
+            { metal: { name: { contains: filters.query, mode: "insensitive" as const } } },
+          ],
+        }
+      : {}),
+  };
+
+  const rows = await db.product.findMany({
+    where,
+    include: { category: true, metal: true, images: true, variants: true },
+    orderBy: { createdAt: "desc" },
+    skip: pagination.skip,
+    take: pagination.take + 1,
+  });
+
+  const hasMore = rows.length > pagination.take;
+  return { products: rows.slice(0, pagination.take).map(mapProduct), hasMore };
+}
+
 export async function storeGetProductBySlug(
   slug: string,
 ): Promise<Product | null> {

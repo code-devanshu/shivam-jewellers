@@ -20,6 +20,7 @@ import {
 import type { Category, Product } from "@/lib/types";
 import { signOutCustomer } from "@/app/(store)/auth/actions";
 import SearchBar from "@/components/store/SearchBar";
+import { useAuthModal } from "@/components/store/AuthModalProvider";
 
 type Props = {
   categories: Category[];
@@ -55,6 +56,7 @@ function CatIcon({ slug }: { slug: string }) {
 export default function Navbar({ categories, trendingProducts, cartCount, wishlistCount, isLoggedIn }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const { openAuthModal } = useAuthModal();
 
   const navCategories = categories
     .filter((c) => c.showInNav)
@@ -139,13 +141,13 @@ export default function Navbar({ categories, trendingProducts, cartCount, wishli
                 )}
               </div>
             ) : (
-              <Link
-                href="/auth"
+              <button
+                onClick={() => openAuthModal()}
                 aria-label="Sign In"
                 className="hidden sm:flex p-2.5 text-gray-500 hover:text-rose-gold transition-colors"
               >
                 <User size={20} strokeWidth={1.5} />
-              </Link>
+              </button>
             )}
 
             {/* Cart */}
@@ -305,14 +307,13 @@ export default function Navbar({ categories, trendingProducts, cartCount, wishli
                 </form>
               </>
             ) : (
-              <Link
-                href="/auth"
-                onClick={() => setMobileOpen(false)}
+              <button
+                onClick={() => { setMobileOpen(false); openAuthModal(); }}
                 className="flex items-center gap-3 py-3 text-sm font-semibold text-rose-gold"
               >
                 <User size={16} strokeWidth={1.5} />
                 Sign In / Register
-              </Link>
+              </button>
             )}
           </div>
         </div>

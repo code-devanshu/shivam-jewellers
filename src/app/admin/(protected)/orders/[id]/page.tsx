@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import type { OrderStatus } from "@prisma/client";
 import StatusUpdater from "./StatusUpdater";
+import ShipmentPanel from "./ShipmentPanel";
 
 export const metadata = { title: "Order Details" };
 
@@ -57,6 +58,7 @@ export default async function AdminOrderDetailPage({
       items: { orderBy: { createdAt: "asc" } },
       address: true,
       invoice: true,
+      shipment: { include: { events: { orderBy: { scannedAt: "asc" } } } },
       statusHistory: { orderBy: { createdAt: "asc" } },
     },
   });
@@ -165,6 +167,12 @@ export default async function AdminOrderDetailPage({
                 <span>GST</span>
                 <span>{formatPrice(Number(order.gstAmount))}</span>
               </div>
+              {order.shippingCharge != null && (
+                <div className="flex justify-between text-sm text-gray-400">
+                  <span>Shipping</span>
+                  <span>{formatPrice(Number(order.shippingCharge))}</span>
+                </div>
+              )}
               <div className="flex justify-between font-bold text-brown-dark text-base border-t border-gray-100 pt-2 mt-1">
                 <span>Total</span>
                 <span className="text-rose-gold">{formatPrice(Number(order.totalAmount))}</span>
@@ -198,6 +206,11 @@ export default async function AdminOrderDetailPage({
               </div>
             ) : (
               <p className="text-sm text-gray-400">—</p>
+            )}
+            {order.estimatedDeliveryDate && (
+              <p className="text-xs text-gray-400 mt-2">
+                Estimated delivery: {fmtDate(order.estimatedDeliveryDate)}
+              </p>
             )}
           </div>
 
@@ -248,6 +261,16 @@ export default async function AdminOrderDetailPage({
 
         {/* Right column — status management + timeline */}
         <div className="space-y-5">
+          {/* Shipment */}
+          <ShipmentPanel
+            order={{
+              id: order.id,
+              status: order.status,
+              deliveryType: order.deliveryType,
+              shipment: order.shipment,
+            }}
+          />
+
           {/* Status updater */}
           <div className="bg-white border border-gray-200 rounded-2xl p-5">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">Update Status</p>

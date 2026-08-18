@@ -266,6 +266,7 @@ export type InvoiceData = {
   }[];
   subtotal: number;
   gstAmount: number;
+  shippingCharge?: number;
   totalAmount: number;
   paymentMethod?: string | null;
   paymentStatus: string;
@@ -395,6 +396,12 @@ function InvoiceDocument({ data }: { data: InvoiceData }) {
               <Text style={styles.totalsLabel}>GST</Text>
               <Text style={styles.totalsValue}>{fmt(data.gstAmount)}</Text>
             </View>
+            {data.shippingCharge ? (
+              <View style={styles.totalsRow}>
+                <Text style={styles.totalsLabel}>Shipping</Text>
+                <Text style={styles.totalsValue}>{fmt(data.shippingCharge)}</Text>
+              </View>
+            ) : null}
             <View style={styles.totalsRowFinal}>
               <Text style={styles.totalsFinalLabel}>Total</Text>
               <Text style={styles.totalsFinalValue}>{fmt(data.totalAmount)}</Text>

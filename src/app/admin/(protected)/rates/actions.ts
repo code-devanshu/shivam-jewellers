@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { storeSetRateOverride, storeClearRateOverride } from "@/lib/admin-store";
 
 export type RateFormState =
@@ -21,9 +21,10 @@ export async function overrideRates(
   if (goldStr && isNaN(gold)) return { status: "error", message: "Invalid gold rate." };
   if (silverStr && isNaN(silver)) return { status: "error", message: "Invalid silver rate." };
 
-  if (goldStr) storeSetRateOverride("metal-gold", gold / 10);
-  if (silverStr) storeSetRateOverride("metal-silver", silver / 10);
+  if (goldStr) await storeSetRateOverride("metal-gold", gold / 10);
+  if (silverStr) await storeSetRateOverride("metal-silver", silver / 10);
 
+  revalidateTag("rates", "max");
   revalidatePath("/admin");
   revalidatePath("/admin/rates");
   revalidatePath("/");
@@ -32,8 +33,9 @@ export async function overrideRates(
 }
 
 export async function clearRateOverrides(): Promise<void> {
-  storeClearRateOverride("metal-gold");
-  storeClearRateOverride("metal-silver");
+  await storeClearRateOverride("metal-gold");
+  await storeClearRateOverride("metal-silver");
+  revalidateTag("rates", "max");
   revalidatePath("/admin");
   revalidatePath("/admin/rates");
   revalidatePath("/");

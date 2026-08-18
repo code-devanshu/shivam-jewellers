@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { getCategories, getMetals, getProducts, getCurrentRates } from "@/lib/data";
+import { getCategories, getMetals, getProductsPage, getCurrentRates, PRODUCTS_PAGE_SIZE } from "@/lib/data";
 import { getCustomerSession } from "@/lib/customer-auth";
 import { getWishlistedProductIds } from "@/lib/customer-store";
-import ProductCard from "@/components/store/ProductCard";
+import ProductGrid from "@/components/store/ProductGrid";
 
 type SearchParams = {
   category?: string;
@@ -49,16 +49,18 @@ export default async function ProductsPage({ searchParams }: Props) {
 
   const customerId = await getCustomerSession();
 
-  const [categories, metals, rates, products, wishlistedIds] = await Promise.all([
+  const filters = {
+    categorySlug: params.category,
+    metalId: params.metal,
+    featured: params.featured === "true",
+    query: params.q,
+  };
+
+  const [categories, metals, rates, { products, hasMore }, wishlistedIds] = await Promise.all([
     getCategories(),
     getMetals(),
     getCurrentRates(),
-    getProducts({
-      categorySlug: params.category,
-      metalId: params.metal,
-      featured: params.featured === "true",
-      query: params.q,
-    }),
+    getProductsPage(filters, { skip: 0, take: PRODUCTS_PAGE_SIZE }),
     customerId ? getWishlistedProductIds(customerId) : Promise.resolve([]),
   ]);
 
@@ -102,7 +104,6 @@ export default async function ProductsPage({ searchParams }: Props) {
             ? `Results for "${params.q}"`
             : activeCategory?.name ?? "All Jewellery"}
         </h1>
-        <p className="text-sm text-brown/50 mt-1">{products.length} products</p>
       </div>
 
       <div className="flex gap-8">
@@ -223,16 +224,14 @@ export default async function ProductsPage({ searchParams }: Props) {
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-              {products.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  ratePerGram={rateMap[product.metalId] ?? 0}
-                  isWishlisted={wishlistedIds.includes(product.id)}
-                />
-              ))}
-            </div>
+            <ProductGrid
+              key={buildUrl({})}
+              initialProducts={products}
+              initialHasMore={hasMore}
+              filters={filters}
+              rateMap={rateMap}
+              wishlistedIds={wishlistedIds}
+            />
           )}
         </div>
       </div>

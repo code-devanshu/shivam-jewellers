@@ -60,13 +60,13 @@ export default function CategoryCarousel({ categories }: Props) {
         className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
-        {categories.map((cat, idx) => (
+        {categories.map((cat) => (
           <div
             key={cat.id}
             data-card
             className="flex-none snap-start w-[calc(50%-8px)] sm:w-[calc(33.333%-11px)] lg:w-[calc(20%-13px)]"
           >
-            <CategoryCard category={cat} priority={idx < 2} />
+            <CategoryCard category={cat} />
           </div>
         ))}
       </div>

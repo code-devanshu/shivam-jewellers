@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireCustomer } from "@/lib/customer-auth";
 import { getLiveRates } from "@/lib/live-rates";
@@ -13,6 +14,7 @@ import {
   verifyRazorpaySignature,
   razorpayKeyId,
 } from "@/lib/razorpay";
+import { checkPincodeServiceability, calculateShippingCost, getExpectedDelivery } from "@/lib/delhivery";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -30,6 +32,7 @@ export type CheckoutInput = {
   deliveryType: "HOME_DELIVERY" | "STORE_PICKUP";
   address?: DeliveryAddress;
   notes?: string;
+  email?: string;
 };
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
@@ -163,6 +166,7 @@ async function issueInvoice(opts: {
   deliveryAddress: DeliveryAddress | null;
   items: InvoiceItemInput[];
   totals: CartTotals;
+  shippingCharge?: number;
   paymentMethod: string;
   paymentStatus: string;
   notes?: string | null;
@@ -177,6 +181,7 @@ async function issueInvoice(opts: {
     items: opts.items,
     subtotal: opts.totals.subtotal,
     gstAmount: opts.totals.gstAmount,
+    shippingCharge: opts.shippingCharge,
     totalAmount: opts.totals.totalAmount,
     paymentMethod: opts.paymentMethod,
     paymentStatus: opts.paymentStatus,
@@ -207,6 +212,28 @@ async function issueInvoice(opts: {
   }
 }
 
+// Captures an optional receipt email at checkout time, only if the customer
+// doesn't already have one on file (phone is the login identifier; email is opt-in).
+async function saveEmailIfMissing(customerId: string, email: string | undefined): Promise<void> {
+  if (!email) return;
+  const trimmed = email.trim();
+  if (!trimmed) return;
+  const customer = await db.customer.findUnique({ where: { id: customerId }, select: { email: true } });
+  if (customer?.email) return;
+  try {
+    await db.customer.update({ where: { id: customerId }, data: { email: trimmed } });
+  } catch (err) {
+    // Email is opt-in and just for receipts — if it's already tied to a
+    // different customer (unique constraint), skip saving it rather than
+    // blocking order placement.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      console.warn(`[checkout] email ${trimmed} already in use by another customer, skipping save`);
+      return;
+    }
+    throw err;
+  }
+}
+
 async function saveAddress(
   customerId: string,
   input: CheckoutInput
@@ -219,10 +246,125 @@ async function saveAddress(
   }
 }
 
+// Fail-open on Delhivery API errors (network/5xx) — a flaky third-party API
+// should never block a genuine sale. Only an explicit "not serviceable"
+// response blocks checkout.
+async function isPincodeServiceable(pincode: string): Promise<boolean> {
+  try {
+    const result = await checkPincodeServiceability(pincode);
+    return result.serviceable;
+  } catch (err) {
+    console.error("[delhivery] pincode check failed:", err);
+    return true;
+  }
+}
+
+// Sums OrderItem.weightGrams * quantity across the cart, floored at the
+// package-weight minimum Delhivery expects a chargeable weight to respect.
+function computeShipmentWeightGrams(cartItems: RawCartItem[]): number {
+  const totalGrams = cartItems.reduce(
+    (sum, ci) => sum + Number(ci.product.weightGrams) * ci.quantity,
+    0
+  );
+  const minGrams = Number(process.env.DELHIVERY_MIN_PACKAGE_WEIGHT_GRAMS ?? 100);
+  return Math.max(Math.ceil(totalGrams), minGrams);
+}
+
+// Real pickup time isn't known until an admin manually creates the shipment
+// (see ShipmentPanel) — this is only used to give the TAT lookup a pickup date
+// so it can return a calendar date instead of just a day count.
+function nextPickupDate(): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(10, 0, 0, 0);
+  return d;
+}
+
+type ShippingQuote = {
+  shippingCharge: number;
+  tatDays?: number;
+  expectedDeliveryDate?: string;
+};
+
+// Fail-open like isPincodeServiceable — a Delhivery outage while quoting
+// shouldn't block checkout. Callers that need a charge (order placement) fall
+// back to DELHIVERY_FALLBACK_SHIPPING_CHARGE when this returns null.
+async function getShippingQuote(
+  pincode: string,
+  paymentMode: "COD" | "Prepaid",
+  weightGrams: number
+): Promise<ShippingQuote | null> {
+  let cost;
+  try {
+    cost = await calculateShippingCost({ destinationPincode: pincode, weightGrams, paymentMode });
+  } catch (err) {
+    console.error("[delhivery] shipping cost lookup failed:", err);
+    return null;
+  }
+
+  let tat: Awaited<ReturnType<typeof getExpectedDelivery>> | null = null;
+  try {
+    tat = await getExpectedDelivery({ destinationPincode: pincode, pickupDate: nextPickupDate() });
+  } catch (err) {
+    console.error("[delhivery] TAT lookup failed:", err);
+  }
+
+  return {
+    shippingCharge: cost.totalAmount,
+    tatDays: tat?.tatDays,
+    expectedDeliveryDate: tat?.expectedDeliveryDate,
+  };
+}
+
+export type ShippingEstimate = {
+  serviceable: boolean;
+  message?: string;
+  shippingCharge?: number;
+  tatDays?: number;
+  expectedDeliveryDate?: string;
+};
+
+export async function checkPincodeAction(
+  pincode: string,
+  paymentMethod: "COD" | "RAZORPAY"
+): Promise<ShippingEstimate> {
+  const customerId = await requireCustomer("/checkout");
+
+  if (!/^\d{6}$/.test(pincode)) {
+    return { serviceable: false, message: "Enter a valid 6-digit pincode." };
+  }
+  const serviceable = await isPincodeServiceable(pincode);
+  if (!serviceable) {
+    return { serviceable: false, message: "Sorry, we currently don't deliver to this pincode." };
+  }
+
+  const cartItems = await getCartWithProducts(customerId);
+  if (cartItems.length === 0) {
+    return { serviceable: true };
+  }
+
+  const weightGrams = computeShipmentWeightGrams(cartItems);
+  const quote = await getShippingQuote(
+    pincode,
+    paymentMethod === "COD" ? "COD" : "Prepaid",
+    weightGrams
+  );
+  if (!quote) {
+    return { serviceable: true };
+  }
+  return {
+    serviceable: true,
+    shippingCharge: quote.shippingCharge,
+    tatDays: quote.tatDays,
+    expectedDeliveryDate: quote.expectedDeliveryDate,
+  };
+}
+
 // ─── Action: COD ──────────────────────────────────────────────────────────────
 
 export async function placeOrderCOD(input: CheckoutInput): Promise<void> {
   const customerId = await requireCustomer("/checkout");
+  await saveEmailIfMissing(customerId, input.email);
   const customer = await db.customer.findUniqueOrThrow({ where: { id: customerId } });
 
   const cartItems = await getCartWithProducts(customerId);
@@ -230,6 +372,27 @@ export async function placeOrderCOD(input: CheckoutInput): Promise<void> {
 
   const rates = await getLiveRates();
   const { items, totals } = buildLineItems(cartItems, rates);
+
+  let shippingCharge = 0;
+  let estimatedDeliveryDate: Date | undefined;
+  if (input.deliveryType === "HOME_DELIVERY" && input.address) {
+    if (!(await isPincodeServiceable(input.address.pincode))) {
+      throw new Error("Sorry, we currently don't deliver to this pincode.");
+    }
+    const weightGrams = computeShipmentWeightGrams(cartItems);
+    const quote = await getShippingQuote(input.address.pincode, "COD", weightGrams);
+    if (quote) {
+      shippingCharge = quote.shippingCharge;
+      if (quote.expectedDeliveryDate) estimatedDeliveryDate = new Date(quote.expectedDeliveryDate);
+    } else {
+      shippingCharge = Number(process.env.DELHIVERY_FALLBACK_SHIPPING_CHARGE ?? 150);
+      console.error(
+        `[delhivery] shipping cost unavailable for pincode ${input.address.pincode}, using fallback charge ₹${shippingCharge}`
+      );
+    }
+  }
+
+  const finalTotalAmount = totals.totalAmount + shippingCharge;
 
   const orderNumber = await nextOrderNumber();
   const goldRate = rates.find((r) => r.metalId === "metal-gold")?.ratePerGram;
@@ -247,7 +410,9 @@ export async function placeOrderCOD(input: CheckoutInput): Promise<void> {
       paymentMethod: "COD",
       subtotal: totals.subtotal,
       gstAmount: totals.gstAmount,
-      totalAmount: totals.totalAmount,
+      shippingCharge,
+      estimatedDeliveryDate,
+      totalAmount: finalTotalAmount,
       notes: input.notes,
       goldRateAtOrder: goldRate,
       silverRateAtOrder: silverRate,
@@ -283,7 +448,8 @@ export async function placeOrderCOD(input: CheckoutInput): Promise<void> {
     deliveryType: input.deliveryType,
     deliveryAddress: input.address ?? null,
     items,
-    totals,
+    totals: { ...totals, totalAmount: finalTotalAmount },
+    shippingCharge,
     paymentMethod: "COD",
     paymentStatus: "PENDING",
     notes: input.notes,
@@ -301,12 +467,34 @@ export async function initRazorpayCheckout(input: CheckoutInput): Promise<{
   keyId: string;
 }> {
   const customerId = await requireCustomer("/checkout");
+  await saveEmailIfMissing(customerId, input.email);
 
   const cartItems = await getCartWithProducts(customerId);
   if (cartItems.length === 0) redirect("/cart");
 
   const rates = await getLiveRates();
   const { items, totals } = buildLineItems(cartItems, rates);
+
+  let shippingCharge = 0;
+  let estimatedDeliveryDate: Date | undefined;
+  if (input.deliveryType === "HOME_DELIVERY" && input.address) {
+    if (!(await isPincodeServiceable(input.address.pincode))) {
+      throw new Error("Sorry, we currently don't deliver to this pincode.");
+    }
+    const weightGrams = computeShipmentWeightGrams(cartItems);
+    const quote = await getShippingQuote(input.address.pincode, "Prepaid", weightGrams);
+    if (quote) {
+      shippingCharge = quote.shippingCharge;
+      if (quote.expectedDeliveryDate) estimatedDeliveryDate = new Date(quote.expectedDeliveryDate);
+    } else {
+      shippingCharge = Number(process.env.DELHIVERY_FALLBACK_SHIPPING_CHARGE ?? 150);
+      console.error(
+        `[delhivery] shipping cost unavailable for pincode ${input.address.pincode}, using fallback charge ₹${shippingCharge}`
+      );
+    }
+  }
+
+  const finalTotalAmount = totals.totalAmount + shippingCharge;
 
   const orderNumber = await nextOrderNumber();
   const goldRate = rates.find((r) => r.metalId === "metal-gold")?.ratePerGram;
@@ -324,7 +512,9 @@ export async function initRazorpayCheckout(input: CheckoutInput): Promise<{
       paymentMethod: "RAZORPAY",
       subtotal: totals.subtotal,
       gstAmount: totals.gstAmount,
-      totalAmount: totals.totalAmount,
+      shippingCharge,
+      estimatedDeliveryDate,
+      totalAmount: finalTotalAmount,
       notes: input.notes,
       goldRateAtOrder: goldRate,
       silverRateAtOrder: silverRate,
@@ -335,7 +525,7 @@ export async function initRazorpayCheckout(input: CheckoutInput): Promise<{
     },
   });
 
-  const amountInPaise = Math.round(totals.totalAmount * 100);
+  const amountInPaise = Math.round(finalTotalAmount * 100);
   const rzpOrder = await rzpCreateOrder(amountInPaise, order.id);
 
   await db.order.update({
@@ -460,6 +650,7 @@ export async function verifyAndConfirmPayment(params: {
       gstAmount: Number(order.gstAmount),
       totalAmount: Number(order.totalAmount),
     },
+    shippingCharge: order.shippingCharge != null ? Number(order.shippingCharge) : undefined,
     paymentMethod: "RAZORPAY",
     paymentStatus: "PAID",
     notes: order.notes,

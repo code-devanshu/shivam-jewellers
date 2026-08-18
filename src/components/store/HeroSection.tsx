@@ -17,18 +17,28 @@ export default function HeroSection({ categories }: Props) {
         .flatMap((c) => (c.imageUrls ?? []).slice(0, 1))
         .filter(Boolean)
         .slice(0, 6),
-    [categories]
+    [categories],
   );
 
-  console.log("[HeroSection] categories:", categories.map((c) => ({ name: c.name, imageUrls: c.imageUrls })));
-  console.log("[HeroSection] slides:", slides);
-
   const [current, setCurrent] = useState(0);
+  // Only the current + next slide are mounted as <Image>s (not all of them),
+  // so the carousel doesn't flood the initial load with images that compete
+  // with the hero's LCP image for bandwidth.
+  const [loadedSlides, setLoadedSlides] = useState<Set<number>>(
+    () => new Set(slides.length > 1 ? [0, 1] : slides.length === 1 ? [0] : []),
+  );
 
   useEffect(() => {
     if (slides.length < 2) return;
     const id = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % slides.length);
+      setCurrent((prev) => {
+        const next = (prev + 1) % slides.length;
+        const following = (next + 1) % slides.length;
+        setLoadedSlides((loaded) =>
+          loaded.has(following) ? loaded : new Set(loaded).add(following),
+        );
+        return next;
+      });
     }, 4500);
     return () => clearInterval(id);
   }, [slides.length]);
@@ -50,14 +60,16 @@ export default function HeroSection({ categories }: Props) {
                 transition: "opacity 1.2s ease-in-out",
               }}
             >
-              <Image
-                src={url}
-                alt=""
-                fill
-                className="object-cover object-center"
-                priority={i === 0}
-                sizes="100vw"
-              />
+              {loadedSlides.has(i) && (
+                <Image
+                  src={url}
+                  alt=""
+                  fill
+                  className="object-cover object-center"
+                  priority={i === 0}
+                  sizes="100vw"
+                />
+              )}
             </div>
           ))}
 
@@ -78,8 +90,7 @@ export default function HeroSection({ categories }: Props) {
       )}
 
       {/* ── Content ───────────────────────────────────────────────── */}
-      <div className="relative w-full max-w-3xl mx-auto px-6 sm:px-8 py-14 lg:py-20 text-center">
-
+      <div className="relative w-full max-w-5xl mx-auto px-6 sm:px-8 py-14 lg:py-20 text-center">
         {/* Badge */}
         <p
           className="text-[11px] font-semibold uppercase mb-4"
@@ -90,9 +101,17 @@ export default function HeroSection({ categories }: Props) {
 
         {/* Decorative rule */}
         <div className="flex items-center justify-center gap-3 mb-5">
-          <div className="h-px w-14" style={{ backgroundColor: "rgba(200,150,100,0.35)" }} />
-          <span style={{ color: "rgba(200,150,100,0.55)", fontSize: 12 }}>✦</span>
-          <div className="h-px w-14" style={{ backgroundColor: "rgba(200,150,100,0.35)" }} />
+          <div
+            className="h-px w-14"
+            style={{ backgroundColor: "rgba(200,150,100,0.35)" }}
+          />
+          <span style={{ color: "rgba(200,150,100,0.55)", fontSize: 12 }}>
+            ✦
+          </span>
+          <div
+            className="h-px w-14"
+            style={{ backgroundColor: "rgba(200,150,100,0.35)" }}
+          />
         </div>
 
         {/* Store name */}
@@ -100,7 +119,7 @@ export default function HeroSection({ categories }: Props) {
           className="font-serif font-bold leading-[1.05] tracking-tight mb-4"
           style={{ fontSize: "clamp(2.8rem, 8vw, 5.5rem)", color: "#fff" }}
         >
-          Shivam<br />Jewellers
+          Shivam Jewellers
         </h1>
 
         {/* Tagline */}
@@ -137,14 +156,23 @@ export default function HeroSection({ categories }: Props) {
         {categories.length > 0 && (
           <>
             <div className="flex items-center justify-center gap-3 mt-8 mb-4">
-              <div className="h-px w-12" style={{ backgroundColor: "rgba(255,255,255,0.12)" }} />
+              <div
+                className="h-px w-12"
+                style={{ backgroundColor: "rgba(255,255,255,0.12)" }}
+              />
               <span
                 className="text-[10px] font-semibold uppercase"
-                style={{ color: "rgba(255,255,255,0.35)", letterSpacing: "0.2em" }}
+                style={{
+                  color: "rgba(255,255,255,0.35)",
+                  letterSpacing: "0.2em",
+                }}
               >
                 Shop by category
               </span>
-              <div className="h-px w-12" style={{ backgroundColor: "rgba(255,255,255,0.12)" }} />
+              <div
+                className="h-px w-12"
+                style={{ backgroundColor: "rgba(255,255,255,0.12)" }}
+              />
             </div>
 
             <div
@@ -180,9 +208,10 @@ export default function HeroSection({ categories }: Props) {
                   width: i === current ? 22 : 7,
                   height: 7,
                   borderRadius: 9999,
-                  backgroundColor: i === current
-                    ? "var(--color-rose-gold, #c4956a)"
-                    : "rgba(255,255,255,0.28)",
+                  backgroundColor:
+                    i === current
+                      ? "var(--color-rose-gold, #c4956a)"
+                      : "rgba(255,255,255,0.28)",
                   border: "none",
                   cursor: "pointer",
                   transition: "all 0.35s ease",

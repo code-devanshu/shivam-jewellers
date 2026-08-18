@@ -19,6 +19,7 @@ export const metadata: Metadata = {
   },
 };
 
+import { Suspense } from "react";
 import { ArrowRight, ShieldCheck, Star, Truck } from "lucide-react";
 import { getCategories, getFeaturedProducts, getCurrentRates } from "@/lib/data";
 import { getCustomerSession } from "@/lib/customer-auth";
@@ -76,16 +77,10 @@ const websiteJsonLd = {
 };
 
 export default async function HomePage() {
-  const customerId = await getCustomerSession();
-
-  const [categories, featured, rates, wishlistedIds] = await Promise.all([
+  const [customerId, categories] = await Promise.all([
+    getCustomerSession(),
     getCategories(),
-    getFeaturedProducts(),
-    getCurrentRates(),
-    customerId ? getWishlistedProductIds(customerId) : Promise.resolve([]),
   ]);
-
-  const rateMap = Object.fromEntries(rates.map((r) => [r.metalId, r.ratePerGram]));
 
   return (
     <div>
@@ -126,38 +121,9 @@ export default async function HomePage() {
       </section>
 
       {/* ── Featured Collection ──────────────────────────────────────────── */}
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-end justify-between mb-8">
-            <div>
-              <p className="text-rose-gold text-xs font-semibold uppercase tracking-widest mb-1">
-                Handpicked
-              </p>
-              <h2 className="text-3xl font-serif font-bold text-brown-dark">
-                Featured Collection
-              </h2>
-            </div>
-            <Link
-              href="/products?featured=true"
-              className="hidden md:flex items-center gap-1.5 text-sm text-rose-gold hover:text-rose-gold-dark font-medium transition-colors"
-            >
-              View all <ArrowRight size={15} />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featured.map((product, idx) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                ratePerGram={rateMap[product.metalId] ?? 0}
-                isWishlisted={wishlistedIds.includes(product.id)}
-                priority={idx < 2}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
+      <Suspense fallback={<FeaturedCollectionSkeleton />}>
+        <FeaturedCollection customerId={customerId} />
+      </Suspense>
 
       {/* ── Trust Pillars ────────────────────────────────────────────────── */}
       <section className="py-16 bg-blush/30 border-t border-blush">
@@ -205,5 +171,87 @@ export default async function HomePage() {
         </div>
       </section>
     </div>
+  );
+}
+
+async function FeaturedCollection({ customerId }: { customerId: string | null }) {
+  const [featured, rates, wishlistedIds] = await Promise.all([
+    getFeaturedProducts(),
+    getCurrentRates(),
+    customerId ? getWishlistedProductIds(customerId) : Promise.resolve([]),
+  ]);
+
+  const rateMap = Object.fromEntries(rates.map((r) => [r.metalId, r.ratePerGram]));
+
+  return (
+    <section className="py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-end justify-between mb-8">
+          <div>
+            <p className="text-rose-gold text-xs font-semibold uppercase tracking-widest mb-1">
+              Handpicked
+            </p>
+            <h2 className="text-3xl font-serif font-bold text-brown-dark">
+              Featured Collection
+            </h2>
+          </div>
+          <Link
+            href="/products?featured=true"
+            className="hidden md:flex items-center gap-1.5 text-sm text-rose-gold hover:text-rose-gold-dark font-medium transition-colors"
+          >
+            View all <ArrowRight size={15} />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {featured.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              ratePerGram={rateMap[product.metalId] ?? 0}
+              isWishlisted={wishlistedIds.includes(product.id)}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FeaturedCollectionSkeleton() {
+  return (
+    <section className="py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-end justify-between mb-8">
+          <div>
+            <p className="text-rose-gold text-xs font-semibold uppercase tracking-widest mb-1">
+              Handpicked
+            </p>
+            <h2 className="text-3xl font-serif font-bold text-brown-dark">
+              Featured Collection
+            </h2>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="bg-white rounded-2xl overflow-hidden border border-blush animate-pulse"
+            >
+              <div className="aspect-square bg-blush/40" />
+              <div className="p-4 space-y-2.5">
+                <div className="h-2.5 w-1/3 bg-blush/60 rounded-full" />
+                <div className="h-3.5 w-4/5 bg-blush/60 rounded-full" />
+                <div className="flex items-center justify-between pt-1">
+                  <div className="h-4 w-16 bg-blush/60 rounded-full" />
+                  <div className="h-3 w-8 bg-blush/40 rounded-full" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
