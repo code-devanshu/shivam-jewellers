@@ -19,6 +19,8 @@ import { addToCart } from "@/app/(store)/cart/actions";
 import { toggleWishlist } from "@/app/(store)/wishlist/actions";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { useAuthModal } from "@/components/store/AuthModalProvider";
+import { useCart } from "@/components/store/CartProvider";
+import { errorToastStyle } from "@/lib/toast-styles";
 
 type Props = {
   product: Product;
@@ -35,19 +37,24 @@ export default function ProductDetail({
 }: Props) {
   const router = useRouter();
   const { openAuthModal } = useAuthModal();
+  const { increment, showFlyout } = useCart();
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
     product.variants[0] ?? null
   );
+  const [variantChosen, setVariantChosen] = useState(product.variants.length <= 1);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [cartState, setCartState] = useState<"idle" | "adding" | "added">("idle");
   const [buyState, setBuyState] = useState<"idle" | "pending">("idle");
   const [wishlisted, setWishlisted] = useState(initialWishlisted);
   const [, startCartTransition] = useTransition();
-  const [, startBuyTransition] = useTransition();
   const [, startWishlistTransition] = useTransition();
 
   const additionalPrice = selectedVariant?.additionalPrice ?? 0;
   const breakdown = calculatePrice(product, ratePerGram, additionalPrice);
+  const primaryImage = product.images.find((i) => i.isPrimary) ?? product.images[0];
+  const outOfStock = !product.isAvailable;
+  const needsVariantSelection = !variantChosen;
+  const purchaseDisabled = outOfStock || needsVariantSelection;
 
   const sizes = [
     ...new Set(
@@ -65,15 +72,27 @@ export default function ProductDetail({
       openAuthModal(`/products/${product.slug}`);
       return;
     }
+    if (purchaseDisabled) return;
     setCartState("adding");
     startCartTransition(async () => {
       try {
         await addToCart(product.id, selectedVariant?.id ?? null);
         setCartState("added");
         setTimeout(() => setCartState("idle"), 2200);
+        increment(1);
+        showFlyout({
+          name: product.name,
+          imageUrl: primaryImage?.url ?? null,
+          price: breakdown.totalPrice,
+          quantity: 1,
+        });
       } catch (e) {
         if (isRedirectError(e)) throw e;
         setCartState("idle");
+        toast.error("Couldn't add to cart", {
+          description: "Please try again.",
+          style: errorToastStyle,
+        });
       }
     });
   };
@@ -83,16 +102,11 @@ export default function ProductDetail({
       openAuthModal(`/products/${product.slug}`);
       return;
     }
+    if (purchaseDisabled) return;
     setBuyState("pending");
-    startBuyTransition(async () => {
-      try {
-        await addToCart(product.id, selectedVariant?.id ?? null);
-        router.push("/cart");
-      } catch (e) {
-        if (isRedirectError(e)) throw e;
-        setBuyState("idle");
-      }
-    });
+    const qs = new URLSearchParams({ buyNow: product.id });
+    if (selectedVariant?.id) qs.set("variant", selectedVariant.id);
+    router.push(`/checkout?${qs.toString()}`);
   };
 
   const handleToggleWishlist = () => {
@@ -256,7 +270,10 @@ export default function ProductDetail({
                   return (
                     <button
                       key={size}
-                      onClick={() => v && setSelectedVariant(v)}
+                      onClick={() => {
+                        if (v) setSelectedVariant(v);
+                        setVariantChosen(true);
+                      }}
                       className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
                         active
                           ? "bg-rose-gold text-white border-rose-gold shadow-sm"
@@ -286,6 +303,7 @@ export default function ProductDetail({
                           (vv) => vv.gemstone === gem
                         );
                         if (v) setSelectedVariant(v);
+                        setVariantChosen(true);
                       }}
                       className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
                         active
@@ -303,21 +321,32 @@ export default function ProductDetail({
 
           {/* CTA buttons */}
           <div className="flex flex-col gap-3">
+            {needsVariantSelection && (
+              <p className="text-xs font-medium text-rose-gold-dark">
+                Please select a size to continue
+              </p>
+            )}
+            {outOfStock && (
+              <p className="text-xs font-medium text-red-600">
+                This piece is currently out of stock
+              </p>
+            )}
+
             {/* Buy Now — primary */}
             <button
               onClick={handleBuyNow}
-              disabled={buyState === "pending"}
+              disabled={buyState === "pending" || purchaseDisabled}
               className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-semibold bg-brown-dark hover:bg-brown text-white disabled:opacity-60 transition-all"
             >
               <Zap size={17} />
-              {buyState === "pending" ? "Please wait…" : "Buy Now"}
+              {buyState === "pending" ? "Please wait…" : outOfStock ? "Out of Stock" : "Buy Now"}
             </button>
 
             {/* Add to Cart + Wishlist */}
             <div className="flex gap-3">
               <button
                 onClick={handleAddToCart}
-                disabled={cartState === "adding"}
+                disabled={cartState === "adding" || purchaseDisabled}
                 className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-semibold border-2 transition-all ${
                   cartState === "added"
                     ? "border-green-500 bg-green-500 text-white"
@@ -325,7 +354,9 @@ export default function ProductDetail({
                 }`}
               >
                 <ShoppingBag size={17} />
-                {cartState === "adding"
+                {outOfStock
+                  ? "Out of Stock"
+                  : cartState === "adding"
                   ? "Adding…"
                   : cartState === "added"
                   ? "Added to Cart!"

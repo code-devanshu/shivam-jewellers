@@ -10,6 +10,8 @@ import { calculatePrice, formatPrice } from "@/lib/price";
 import { addToCart } from "@/app/(store)/cart/actions";
 import { toggleWishlist } from "@/app/(store)/wishlist/actions";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { useCart } from "@/components/store/CartProvider";
+import { errorToastStyle } from "@/lib/toast-styles";
 
 type Props = {
   product: Product;
@@ -25,6 +27,8 @@ export default function ProductCard({ product, ratePerGram, isWishlisted: initia
   const [wishlisted, setWishlisted] = useState(initialWishlisted);
   const [, startTransition] = useTransition();
   const [, startWishlistTransition] = useTransition();
+  const { increment, showFlyout } = useCart();
+  const outOfStock = !product.isAvailable;
 
   function handleToggleWishlist(e: React.MouseEvent) {
     e.preventDefault();
@@ -47,16 +51,27 @@ export default function ProductCard({ product, ratePerGram, isWishlisted: initia
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (cartState !== "idle") return;
+    if (cartState !== "idle" || outOfStock) return;
     setCartState("adding");
     startTransition(async () => {
       try {
         await addToCart(product.id, null);
         setCartState("added");
         setTimeout(() => setCartState("idle"), 2000);
+        increment(1);
+        showFlyout({
+          name: product.name,
+          imageUrl: primary?.url ?? null,
+          price: totalPrice,
+          quantity: 1,
+        });
       } catch (err) {
         if (isRedirectError(err)) throw err;
         setCartState("idle");
+        toast.error("Couldn't add to cart", {
+          description: "Please try again.",
+          style: errorToastStyle,
+        });
       }
     });
   }
@@ -102,23 +117,29 @@ export default function ProductCard({ product, ratePerGram, isWishlisted: initia
 
           {/* Add to Cart — slides up on hover, always visible on mobile */}
           <div className="absolute bottom-0 left-0 right-0 translate-y-full group-hover:translate-y-0 transition-transform duration-200 ease-out">
-            <button
-              onClick={handleAddToCart}
-              disabled={cartState === "adding"}
-              className={`w-full py-2.5 flex items-center justify-center gap-1.5 text-xs font-semibold transition-colors ${
-                cartState === "added"
-                  ? "bg-green-500 text-white"
-                  : "bg-rose-gold hover:bg-rose-gold-dark text-white disabled:opacity-70"
-              }`}
-            >
-              {cartState === "added" ? (
-                <><Check size={13} /> Added!</>
-              ) : cartState === "adding" ? (
-                "Adding…"
-              ) : (
-                <><ShoppingBag size={13} /> Add to Cart</>
-              )}
-            </button>
+            {outOfStock ? (
+              <div className="w-full py-2.5 flex items-center justify-center text-xs font-semibold bg-gray-400 text-white">
+                Out of Stock
+              </div>
+            ) : (
+              <button
+                onClick={handleAddToCart}
+                disabled={cartState === "adding"}
+                className={`w-full py-2.5 flex items-center justify-center gap-1.5 text-xs font-semibold transition-colors ${
+                  cartState === "added"
+                    ? "bg-green-500 text-white"
+                    : "bg-rose-gold hover:bg-rose-gold-dark text-white disabled:opacity-70"
+                }`}
+              >
+                {cartState === "added" ? (
+                  <><Check size={13} /> Added!</>
+                ) : cartState === "adding" ? (
+                  "Adding…"
+                ) : (
+                  <><ShoppingBag size={13} /> Add to Cart</>
+                )}
+              </button>
+            )}
           </div>
         </div>
 

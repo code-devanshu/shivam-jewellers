@@ -73,7 +73,6 @@ export async function storeGetProductsPage(
   pagination: { skip: number; take: number },
 ): Promise<{ products: Product[]; hasMore: boolean }> {
   const where = {
-    isAvailable: true,
     ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
     ...(filters.metalId ? { metalId: filters.metalId } : {}),
     ...(filters.featured ? { isFeatured: true } : {}),
@@ -90,14 +89,17 @@ export async function storeGetProductsPage(
 
   const rows = await db.product.findMany({
     where,
-    include: { category: true, metal: true, images: true, variants: true },
-    orderBy: { createdAt: "desc" },
+    include: { category: true, metal: true, images: true },
+    orderBy: [{ isAvailable: "desc" }, { createdAt: "desc" }],
     skip: pagination.skip,
     take: pagination.take + 1,
   });
 
   const hasMore = rows.length > pagination.take;
-  return { products: rows.slice(0, pagination.take).map(mapProduct), hasMore };
+  return {
+    products: rows.slice(0, pagination.take).map((row) => mapProduct({ ...row, variants: [] })),
+    hasMore,
+  };
 }
 
 export async function storeGetProductBySlug(

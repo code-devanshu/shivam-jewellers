@@ -2,12 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useTransition } from "react";
+import { startTransition, useOptimistic, useTransition } from "react";
 import { ArrowRight } from "lucide-react";
 import { Minus, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import type { Product, ProductVariant } from "@/lib/types";
 import { calculatePrice, formatPrice } from "@/lib/price";
-import { removeFromCart, updateCartQty } from "./actions";
+import { removeFromCart, restoreCartItem, updateCartQty } from "./actions";
 
 type CartItem = {
   id: string;
@@ -24,11 +25,13 @@ type Props = {
 function CartRow({
   item,
   rates,
+  onRemove,
 }: {
   item: CartItem;
   rates: Record<string, number>;
+  onRemove: (item: CartItem) => void;
 }) {
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startQtyTransition] = useTransition();
   const ratePerGram = rates[item.product.metalId] ?? 0;
   const breakdown = calculatePrice(
     item.product,
@@ -38,10 +41,14 @@ function CartRow({
   const primary =
     item.product.images.find((i) => i.isPrimary) ?? item.product.images[0];
 
-  const change = (delta: number) =>
-    startTransition(() => updateCartQty(item.id, item.quantity + delta));
-  const remove = () =>
-    startTransition(() => removeFromCart(item.id));
+  const change = (delta: number) => {
+    const newQty = item.quantity + delta;
+    if (newQty <= 0) {
+      onRemove(item);
+      return;
+    }
+    startQtyTransition(() => updateCartQty(item.id, newQty));
+  };
 
   return (
     <div
@@ -86,8 +93,8 @@ function CartRow({
           <div className="flex items-center gap-1 border border-blush rounded-full px-1 py-0.5">
             <button
               onClick={() => change(-1)}
-              className="p-1 text-brown/60 hover:text-rose-gold transition-colors disabled:opacity-40"
-              disabled={item.quantity <= 1}
+              className="p-2 text-brown/60 hover:text-rose-gold transition-colors"
+              aria-label={item.quantity <= 1 ? "Remove" : "Decrease quantity"}
             >
               <Minus size={12} />
             </button>
@@ -96,7 +103,8 @@ function CartRow({
             </span>
             <button
               onClick={() => change(1)}
-              className="p-1 text-brown/60 hover:text-rose-gold transition-colors"
+              className="p-2 text-brown/60 hover:text-rose-gold transition-colors"
+              aria-label="Increase quantity"
             >
               <Plus size={12} />
             </button>
@@ -107,11 +115,11 @@ function CartRow({
               {formatPrice(breakdown.totalPrice * item.quantity)}
             </span>
             <button
-              onClick={remove}
-              className="p-1.5 text-gray-300 hover:text-red-400 transition-colors"
+              onClick={() => onRemove(item)}
+              className="p-2.5 -m-1 text-gray-300 hover:text-red-400 transition-colors"
               aria-label="Remove"
             >
-              <Trash2 size={15} />
+              <Trash2 size={16} />
             </button>
           </div>
         </div>
@@ -121,7 +129,51 @@ function CartRow({
 }
 
 export default function CartClient({ items, rates }: Props) {
-  const subtotal = items.reduce((sum, item) => {
+  const [optimisticItems, removeOptimisticItem] = useOptimistic(
+    items,
+    (state, removedId: string) => state.filter((i) => i.id !== removedId)
+  );
+
+  const handleRemove = (item: CartItem) => {
+    startTransition(async () => {
+      removeOptimisticItem(item.id);
+      await removeFromCart(item.id);
+    });
+
+    toast("Removed from cart", {
+      description: item.product.name,
+      duration: 5000,
+      style: {
+        background: "#fff",
+        border: "1px solid #ffe4e4",
+        color: "#2c1810",
+      },
+      classNames: {
+        description: "!text-[#4a2c24]/70",
+        actionButton: "!bg-rose-gold !text-white hover:!bg-rose-gold-dark",
+      },
+      action: {
+        label: "Undo",
+        onClick: () => {
+          toast.promise(
+            restoreCartItem(item.product.id, item.variant?.id ?? null, item.quantity),
+            {
+              loading: "Restoring...",
+              success: "Item restored to cart",
+              error: "Couldn't restore item",
+              style: {
+                background: "#fff",
+                border: "1px solid #ffe4e4",
+                color: "#2c1810",
+              },
+            }
+          );
+        },
+      },
+    });
+  };
+
+  const subtotal = optimisticItems.reduce((sum, item) => {
     const ratePerGram = rates[item.product.metalId] ?? 0;
     const { basePrice } = calculatePrice(
       item.product,
@@ -131,7 +183,7 @@ export default function CartClient({ items, rates }: Props) {
     return sum + basePrice * item.quantity;
   }, 0);
 
-  const gst = items.reduce((sum, item) => {
+  const gst = optimisticItems.reduce((sum, item) => {
     const ratePerGram = rates[item.product.metalId] ?? 0;
     const { gstAmount } = calculatePrice(
       item.product,
@@ -148,15 +200,15 @@ export default function CartClient({ items, rates }: Props) {
       <h1 className="text-2xl font-serif font-bold text-brown-dark mb-6">
         Your Cart{" "}
         <span className="text-base font-normal text-brown/50">
-          ({items.length} {items.length === 1 ? "item" : "items"})
+          ({optimisticItems.length} {optimisticItems.length === 1 ? "item" : "items"})
         </span>
       </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Items */}
         <div className="lg:col-span-2 bg-white border border-blush rounded-2xl p-6">
-          {items.map((item) => (
-            <CartRow key={item.id} item={item} rates={rates} />
+          {optimisticItems.map((item) => (
+            <CartRow key={item.id} item={item} rates={rates} onRemove={handleRemove} />
           ))}
         </div>
 

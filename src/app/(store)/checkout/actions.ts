@@ -28,11 +28,17 @@ export type DeliveryAddress = {
   pincode: string;
 };
 
+export type BuyNowItem = {
+  productId: string;
+  variantId: string | null;
+};
+
 export type CheckoutInput = {
   deliveryType: "HOME_DELIVERY" | "STORE_PICKUP";
   address?: DeliveryAddress;
   notes?: string;
   email?: string;
+  buyNow?: BuyNowItem;
 };
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
@@ -61,6 +67,62 @@ async function getCartWithProducts(customerId: string) {
 
 type RawCartItem = Awaited<ReturnType<typeof getCartWithProducts>>[number];
 type LiveRates = Awaited<ReturnType<typeof getLiveRates>>;
+
+// Structural subset of RawCartItem — lets a single freshly-fetched "buy now" product
+// stand in for a real persisted CartItem in the pricing/weight helpers below.
+type LineSource = {
+  product: RawCartItem["product"];
+  variant: RawCartItem["variant"];
+  quantity: number;
+};
+
+// Fetches a single product (+ optional variant) fresh from the DB for the "Buy Now"
+// skip-cart flow — never touches the customer's persisted cart. Returns [] if the
+// product is missing or no longer available, which callers treat as a hard stop.
+async function getBuyNowItem(buyNow: BuyNowItem): Promise<LineSource[]> {
+  const product = await db.product.findUnique({
+    where: { id: buyNow.productId },
+    include: { metal: true },
+  });
+  if (!product || !product.isAvailable) return [];
+
+  const variant = buyNow.variantId
+    ? await db.productVariant.findUnique({ where: { id: buyNow.variantId } })
+    : null;
+
+  return [{ product, variant, quantity: 1 }];
+}
+
+// Reduces the customer's persisted cart by exactly what was just ordered, rather than
+// wiping the whole cart. For a normal cart checkout this empties it completely (ordered
+// qty == cart qty for every line, same end result as before). For a "Buy Now" order the
+// item was never added to the cart, so nothing matches and this is a no-op — any other
+// items already sitting in the cart are left untouched. If the same product/variant was
+// independently in the cart too, its saved quantity is reduced by what was just bought,
+// which mirrors what a shopper would expect.
+async function decrementCartAfterOrder(
+  customerId: string,
+  items: { productId: string | null; variantId: string | null; quantity: number }[]
+): Promise<void> {
+  const cart = await db.cart.findUnique({ where: { customerId } });
+  if (!cart) return;
+
+  for (const item of items) {
+    if (!item.productId) continue;
+    const existing = await db.cartItem.findFirst({
+      where: { cartId: cart.id, productId: item.productId, variantId: item.variantId },
+    });
+    if (!existing) continue;
+    if (existing.quantity <= item.quantity) {
+      await db.cartItem.delete({ where: { id: existing.id } });
+    } else {
+      await db.cartItem.update({
+        where: { id: existing.id },
+        data: { quantity: existing.quantity - item.quantity },
+      });
+    }
+  }
+}
 
 function buildVariantLabel(variant: RawCartItem["variant"]): string | null {
   if (!variant) return null;
@@ -91,7 +153,7 @@ type OrderItemPayload = {
 type CartTotals = { subtotal: number; gstAmount: number; totalAmount: number };
 
 function buildLineItems(
-  cartItems: RawCartItem[],
+  cartItems: LineSource[],
   rates: LiveRates
 ): { items: OrderItemPayload[]; totals: CartTotals } {
   let subtotal = 0;
@@ -261,7 +323,7 @@ async function isPincodeServiceable(pincode: string): Promise<boolean> {
 
 // Sums OrderItem.weightGrams * quantity across the cart, floored at the
 // package-weight minimum Delhivery expects a chargeable weight to respect.
-function computeShipmentWeightGrams(cartItems: RawCartItem[]): number {
+function computeShipmentWeightGrams(cartItems: LineSource[]): number {
   const totalGrams = cartItems.reduce(
     (sum, ci) => sum + Number(ci.product.weightGrams) * ci.quantity,
     0
@@ -326,7 +388,8 @@ export type ShippingEstimate = {
 
 export async function checkPincodeAction(
   pincode: string,
-  paymentMethod: "COD" | "RAZORPAY"
+  paymentMethod: "COD" | "RAZORPAY",
+  buyNow?: BuyNowItem
 ): Promise<ShippingEstimate> {
   const customerId = await requireCustomer("/checkout");
 
@@ -338,9 +401,11 @@ export async function checkPincodeAction(
     return { serviceable: false, message: "Sorry, we currently don't deliver to this pincode." };
   }
 
-  const cartItems = await getCartWithProducts(customerId);
+  const cartItems = buyNow ? await getBuyNowItem(buyNow) : await getCartWithProducts(customerId);
   if (cartItems.length === 0) {
-    return { serviceable: true };
+    return buyNow
+      ? { serviceable: false, message: "This item is no longer available." }
+      : { serviceable: true };
   }
 
   const weightGrams = computeShipmentWeightGrams(cartItems);
@@ -367,8 +432,8 @@ export async function placeOrderCOD(input: CheckoutInput): Promise<void> {
   await saveEmailIfMissing(customerId, input.email);
   const customer = await db.customer.findUniqueOrThrow({ where: { id: customerId } });
 
-  const cartItems = await getCartWithProducts(customerId);
-  if (cartItems.length === 0) redirect("/cart");
+  const cartItems = input.buyNow ? await getBuyNowItem(input.buyNow) : await getCartWithProducts(customerId);
+  if (cartItems.length === 0) redirect(input.buyNow ? "/products" : "/cart");
 
   const rates = await getLiveRates();
   const { items, totals } = buildLineItems(cartItems, rates);
@@ -423,7 +488,7 @@ export async function placeOrderCOD(input: CheckoutInput): Promise<void> {
     },
   });
 
-  await db.cartItem.deleteMany({ where: { cart: { customerId } } });
+  await decrementCartAfterOrder(customerId, items);
   revalidatePath("/cart");
 
   for (const item of items) {
@@ -469,8 +534,8 @@ export async function initRazorpayCheckout(input: CheckoutInput): Promise<{
   const customerId = await requireCustomer("/checkout");
   await saveEmailIfMissing(customerId, input.email);
 
-  const cartItems = await getCartWithProducts(customerId);
-  if (cartItems.length === 0) redirect("/cart");
+  const cartItems = input.buyNow ? await getBuyNowItem(input.buyNow) : await getCartWithProducts(customerId);
+  if (cartItems.length === 0) redirect(input.buyNow ? "/products" : "/cart");
 
   const rates = await getLiveRates();
   const { items, totals } = buildLineItems(cartItems, rates);
@@ -576,7 +641,7 @@ export async function confirmRazorpayPayment(params: {
     },
   });
 
-  await db.cartItem.deleteMany({ where: { cart: { customerId: order.customerId } } });
+  await decrementCartAfterOrder(order.customerId, order.items);
   revalidatePath("/cart");
 
   for (const item of order.items) {

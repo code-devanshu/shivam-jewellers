@@ -71,6 +71,10 @@ type ProductFilters = {
 
 export const PRODUCTS_PAGE_SIZE = 6;
 
+const _cachedProductsPage = unstable_cache(storeGetProductsPage, ["products-page"], {
+  tags: ["products"],
+});
+
 export async function getProductsPage(
   filters: ProductFilters | undefined,
   pagination: { skip: number; take: number },
@@ -80,7 +84,7 @@ export async function getProductsPage(
     ? categories.find((c) => c.slug === filters.categorySlug)
     : undefined;
 
-  return storeGetProductsPage(
+  return _cachedProductsPage(
     {
       categoryId: category?.id,
       metalId: filters?.metalId,

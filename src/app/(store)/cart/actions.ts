@@ -26,6 +26,20 @@ export async function removeFromCart(itemId: string): Promise<void> {
   revalidatePath("/cart");
 }
 
+// Re-adds a just-removed item for the cart's "Undo" toast. Uses the same
+// upsert as addToCart, so it merges back into an item that was re-added in
+// the meantime instead of creating a duplicate row.
+export async function restoreCartItem(
+  productId: string,
+  variantId: string | null,
+  quantity: number
+): Promise<void> {
+  const customerId = await getCustomerSession();
+  if (!customerId) return;
+  await upsertCartItem(customerId, productId, variantId, quantity);
+  revalidatePath("/cart");
+}
+
 export async function updateCartQty(itemId: string, qty: number): Promise<void> {
   const customerId = await getCustomerSession();
   if (!customerId) return;

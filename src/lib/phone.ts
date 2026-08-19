@@ -18,6 +18,13 @@ export function isValidIndianPhone(raw: string): boolean {
   return tenDigits !== null && INDIAN_MOBILE_RE.test(tenDigits);
 }
 
+// Strips a "+91"/"91" country-code prefix for display in bare-10-digit inputs.
+// Returns "" (rather than the raw value) if it doesn't look like an Indian
+// mobile number at all, so callers don't prefill a field with garbage.
+export function toTenDigits(raw: string): string {
+  return extractTenDigits(raw) ?? "";
+}
+
 // Normalizes to E.164 (+91XXXXXXXXXX) for storage and for WhatsApp/SMS API calls.
 // Throws if the input isn't a valid Indian mobile number — validate first.
 export function normalizePhone(raw: string): string {

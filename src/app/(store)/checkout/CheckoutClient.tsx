@@ -5,8 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { Truck, Store, Banknote, ChevronRight, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { formatPrice } from "@/lib/price";
+import { toTenDigits } from "@/lib/phone";
 import { placeOrderCOD, initRazorpayCheckout, verifyAndConfirmPayment, checkPincodeAction } from "./actions";
-import type { CheckoutInput } from "./actions";
+import type { CheckoutInput, BuyNowItem } from "./actions";
 
 // ── Razorpay type shim ────────────────────────────────────────────────────────
 
@@ -57,6 +58,7 @@ type Props = {
   customerName: string | null;
   customerPhone: string | null;
   customerEmail: string | null;
+  buyNow: BuyNowItem | null;
 };
 
 // ── Input component ───────────────────────────────────────────────────────────
@@ -115,10 +117,11 @@ export default function CheckoutClient({
   customerName,
   customerPhone,
   customerEmail,
+  buyNow,
 }: Props) {
   const [deliveryType, setDeliveryType] = useState<"HOME_DELIVERY" | "STORE_PICKUP">("STORE_PICKUP");
   const [name, setName] = useState(customerName ?? "");
-  const [phone, setPhone] = useState(customerPhone ?? "");
+  const [phone, setPhone] = useState(customerPhone ? toTenDigits(customerPhone) : "");
   const [line1, setLine1] = useState("");
   const [line2, setLine2] = useState("");
   const [city, setCity] = useState("");
@@ -148,7 +151,7 @@ export default function CheckoutClient({
       }
       setPincodeCheck({ status: "checking" });
       try {
-        const result = await checkPincodeAction(pincode, paymentMethod);
+        const result = await checkPincodeAction(pincode, paymentMethod, buyNow ?? undefined);
         setPincodeCheck(
           result.serviceable
             ? {
@@ -165,7 +168,7 @@ export default function CheckoutClient({
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [pincode, deliveryType, paymentMethod]);
+  }, [pincode, deliveryType, paymentMethod, buyNow]);
 
   const shippingCharge = deliveryType === "HOME_DELIVERY" ? pincodeCheck.shippingCharge ?? 0 : 0;
   const displayTotal = totalAmount + shippingCharge;
@@ -179,6 +182,7 @@ export default function CheckoutClient({
           : undefined,
       notes: notes.trim() || undefined,
       email: email.trim() || undefined,
+      buyNow: buyNow ?? undefined,
     };
   }
 

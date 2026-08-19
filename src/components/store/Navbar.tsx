@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
+import Link, { useLinkStatus } from "next/link";
+import { useEffect, useState } from "react";
 import {
   Heart,
   Menu,
@@ -21,6 +21,7 @@ import type { Category, Product } from "@/lib/types";
 import { signOutCustomer } from "@/app/(store)/auth/actions";
 import SearchBar from "@/components/store/SearchBar";
 import { useAuthModal } from "@/components/store/AuthModalProvider";
+import { useCart } from "@/components/store/CartProvider";
 
 type Props = {
   categories: Category[];
@@ -53,10 +54,34 @@ function CatIcon({ slug }: { slug: string }) {
   );
 }
 
+// Fixed-size dot so it never shifts layout; only fades in once a click is pending,
+// with a short delay so fast (already-prefetched) navigations don't flash it.
+function LinkPendingDot() {
+  const { pending } = useLinkStatus();
+  return (
+    <span
+      aria-hidden
+      className={`inline-block w-1.5 h-1.5 rounded-full bg-rose-gold shrink-0 transition-opacity duration-150 ${
+        pending ? "opacity-100 animate-pulse" : "opacity-0"
+      }`}
+      style={{ transitionDelay: pending ? "100ms" : "0ms" }}
+    />
+  );
+}
+
 export default function Navbar({ categories, trendingProducts, cartCount, wishlistCount, isLoggedIn }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const { openAuthModal } = useAuthModal();
+  const { count, setCount } = useCart();
+
+  useEffect(() => {
+    setCount(cartCount);
+    // Seeds the shared cart count from the server-rendered value. Deliberately not
+    // depending on `setCount` (stable via useCallback) so this only re-syncs when
+    // the server-fetched cartCount itself changes, not on every client-side increment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartCount]);
 
   const navCategories = categories
     .filter((c) => c.showInNav)
@@ -157,9 +182,9 @@ export default function Navbar({ categories, trendingProducts, cartCount, wishli
               className="relative p-2.5 text-gray-500 hover:text-rose-gold transition-colors"
             >
               <ShoppingBag size={20} strokeWidth={1.5} />
-              {cartCount > 0 && (
+              {count > 0 && (
                 <span className="absolute top-1.5 right-1.5 min-w-[14px] h-[14px] bg-rose-gold text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">
-                  {cartCount > 9 ? "9+" : cartCount}
+                  {count > 9 ? "9+" : count}
                 </span>
               )}
             </Link>
@@ -210,6 +235,7 @@ export default function Navbar({ categories, trendingProducts, cartCount, wishli
               >
                 <CatIcon slug={cat.slug} />
                 {cat.name}
+                <LinkPendingDot />
               </Link>
             ))}
 
@@ -249,6 +275,7 @@ export default function Navbar({ categories, trendingProducts, cartCount, wishli
                 <span className="flex items-center gap-3">
                   <CatIcon slug={cat.slug} />
                   {cat.name}
+                  <LinkPendingDot />
                 </span>
                 <span className="text-gray-400 text-xs">›</span>
               </Link>

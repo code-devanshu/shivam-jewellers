@@ -3,6 +3,7 @@ import Navbar from "@/components/store/Navbar";
 import Footer from "@/components/store/Footer";
 import RateBanner from "@/components/store/RateBanner";
 import AuthModalProvider from "@/components/store/AuthModalProvider";
+import CartProvider from "@/components/store/CartProvider";
 import CookieConsent from "@/components/store/CookieConsent";
 import { Toaster } from "sonner";
 import { getCurrentRates, getCategories, getFeaturedProducts } from "@/lib/data";
@@ -22,25 +23,27 @@ export default async function StoreLayout({
   ]);
 
   return (
-    <AuthModalProvider isLoggedIn={!!customerId}>
-      <RateBanner rates={rates} />
-      <Suspense
-        fallback={
-          <Navbar
-            categories={categories}
-            trendingProducts={[]}
-            cartCount={0}
-            wishlistCount={0}
-            isLoggedIn={!!customerId}
-          />
-        }
-      >
-        <NavbarWithCounts categories={categories} trendingProducts={featuredProducts} customerId={customerId} />
-      </Suspense>
-      <main className="flex-1 bg-background">{children}</main>
-      <Footer />
-      <Toaster position="bottom-center" richColors />
-      <CookieConsent />
-    </AuthModalProvider>
+    <CartProvider initialCount={0}>
+      <AuthModalProvider isLoggedIn={!!customerId}>
+        <RateBanner rates={rates} />
+        <Suspense
+          fallback={
+            <Navbar
+              categories={categories}
+              trendingProducts={[]}
+              cartCount={0}
+              wishlistCount={0}
+              isLoggedIn={!!customerId}
+            />
+          }
+        >
+          <NavbarWithCounts categories={categories} trendingProducts={featuredProducts} customerId={customerId} />
+        </Suspense>
+        <main className="flex-1 bg-background">{children}</main>
+        <Footer />
+        <Toaster position="bottom-center" richColors />
+        <CookieConsent />
+      </AuthModalProvider>
+    </CartProvider>
   );
 }
