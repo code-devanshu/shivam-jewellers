@@ -46,8 +46,10 @@ export default function PrivacyPage() {
           <p className="leading-relaxed">
             We use your information to process and ship your orders, send order
             confirmations and updates, respond to enquiries, and improve our
-            products and services. We do not sell or share your personal data
-            with third parties for marketing purposes.
+            products and services. We do not sell your personal data. If you
+            consent to advertising cookies, limited browsing activity is shared
+            with our advertising partners (such as Meta) to show you relevant
+            ads — see the Cookies section below.
           </p>
         </section>
 
@@ -68,8 +70,14 @@ export default function PrivacyPage() {
             Cookies
           </h2>
           <p className="leading-relaxed">
-            Our website uses cookies to keep you signed in and to remember your
-            cart. We do not use advertising or tracking cookies.
+            Our website uses essential cookies to keep you signed in and to
+            remember your cart — these are always on and required for the site
+            to function. With your consent, we also use advertising cookies
+            (Meta Pixel) to understand how visitors use our site and to show
+            you relevant ads on Facebook and Instagram. You can accept or
+            decline advertising cookies from the cookie banner shown on your
+            first visit; declining does not affect your ability to browse or
+            shop with us.
           </p>
         </section>
 
