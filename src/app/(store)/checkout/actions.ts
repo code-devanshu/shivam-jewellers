@@ -541,45 +541,30 @@ export async function initRazorpayCheckout(input: CheckoutInput): Promise<{
   };
 }
 
-// ─── Action: Razorpay verify ───────────────────────────────────────────────────
+// ─── Shared: Razorpay payment confirmation ─────────────────────────────────────
+// Called from both the client-side verifyAndConfirmPayment action (immediately
+// after checkout.js reports success) and the /api/webhooks/razorpay route (as a
+// server-side reconciliation fallback if the browser never reports back). Both
+// callers may race on the same order, so this is written to be idempotent.
 
-export async function verifyAndConfirmPayment(params: {
+export async function confirmRazorpayPayment(params: {
   orderId: string;
-  razorpayOrderId: string;
-  razorpayPaymentId: string;
-  razorpaySignature: string;
-}): Promise<void> {
-  const customerId = await requireCustomer();
-
-  if (
-    !verifyRazorpaySignature(
-      params.razorpayOrderId,
-      params.razorpayPaymentId,
-      params.razorpaySignature
-    )
-  ) {
-    throw new Error("Payment verification failed. Please contact support.");
-  }
-
+  paymentId: string;
+}): Promise<"confirmed" | "already_confirmed" | "not_found"> {
   const order = await db.order.findUnique({
     where: { id: params.orderId },
     include: { items: true, address: true, customer: true },
   });
 
-  if (!order || order.customerId !== customerId) {
-    throw new Error("Order not found.");
-  }
-
-  if (order.status !== "PENDING_PAYMENT") {
-    redirect(`/checkout/success/${order.id}`);
-  }
+  if (!order) return "not_found";
+  if (order.status !== "PENDING_PAYMENT") return "already_confirmed";
 
   await db.order.update({
     where: { id: order.id },
     data: {
       status: "CONFIRMED",
       paymentStatus: "PAID",
-      paymentId: params.razorpayPaymentId,
+      paymentId: params.paymentId,
     },
   });
 
@@ -587,11 +572,11 @@ export async function verifyAndConfirmPayment(params: {
     data: {
       orderId: order.id,
       status: "CONFIRMED",
-      note: `Payment received (${params.razorpayPaymentId})`,
+      note: `Payment received (${params.paymentId})`,
     },
   });
 
-  await db.cartItem.deleteMany({ where: { cart: { customerId } } });
+  await db.cartItem.deleteMany({ where: { cart: { customerId: order.customerId } } });
   revalidatePath("/cart");
 
   for (const item of order.items) {
@@ -656,5 +641,46 @@ export async function verifyAndConfirmPayment(params: {
     notes: order.notes,
   });
 
-  redirect(`/checkout/success/${order.id}`);
+  return "confirmed";
+}
+
+// ─── Action: Razorpay verify ───────────────────────────────────────────────────
+
+export async function verifyAndConfirmPayment(params: {
+  orderId: string;
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
+}): Promise<void> {
+  const customerId = await requireCustomer();
+
+  if (
+    !verifyRazorpaySignature(
+      params.razorpayOrderId,
+      params.razorpayPaymentId,
+      params.razorpaySignature
+    )
+  ) {
+    throw new Error("Payment verification failed. Please contact support.");
+  }
+
+  const order = await db.order.findUnique({
+    where: { id: params.orderId },
+    select: { customerId: true },
+  });
+
+  if (!order || order.customerId !== customerId) {
+    throw new Error("Order not found.");
+  }
+
+  const result = await confirmRazorpayPayment({
+    orderId: params.orderId,
+    paymentId: params.razorpayPaymentId,
+  });
+
+  if (result === "not_found") {
+    throw new Error("Order not found.");
+  }
+
+  redirect(`/checkout/success/${params.orderId}`);
 }

@@ -22,6 +22,20 @@ function codesMatch(a: string, b: string): boolean {
 const OTP_DEV_BYPASS =
   process.env.NODE_ENV !== "production" && process.env.OTP_DEV_BYPASS === "true";
 
+// Lets one specific, self-owned number (e.g. for Razorpay's manual website
+// verification, where a reviewer needs to log in but there's no password to
+// give them) receive a fixed OTP instead of a random SMS/WhatsApp one. Runs in
+// production deliberately — reviewer access has to work on the live site —
+// but only ever matches the single number configured here, and is a no-op
+// unless both env vars are explicitly set.
+function reviewerOtpOverride(phone: string): string | null {
+  const reviewerPhone = process.env.RAZORPAY_REVIEWER_PHONE;
+  const reviewerOtp = process.env.RAZORPAY_REVIEWER_OTP;
+  if (!reviewerPhone || !reviewerOtp) return null;
+  if (!isValidIndianPhone(reviewerPhone)) return null;
+  return normalizePhone(reviewerPhone) === phone ? reviewerOtp : null;
+}
+
 export async function sendOtp(
   rawPhone: string,
 ): Promise<{ error: string } | { ok: true; devCode?: string }> {
@@ -36,7 +50,8 @@ export async function sendOtp(
   });
   if (recent) return { error: "Please wait 60 seconds before requesting another OTP." };
 
-  const code = String(randomInt(100000, 999999));
+  const reviewerCode = reviewerOtpOverride(phone);
+  const code = reviewerCode ?? String(randomInt(100000, 999999));
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
   await db.customerOtp.deleteMany({ where: { phone } });
@@ -45,6 +60,11 @@ export async function sendOtp(
   if (OTP_DEV_BYPASS) {
     console.log(`[otp-dev-bypass] ${phone} -> ${code}`);
     return { ok: true, devCode: code };
+  }
+
+  if (reviewerCode) {
+    console.log(`[otp-reviewer] fixed OTP issued to whitelisted reviewer number`);
+    return { ok: true };
   }
 
   try {

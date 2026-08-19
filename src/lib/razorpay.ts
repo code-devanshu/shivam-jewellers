@@ -45,3 +45,13 @@ export function razorpayKeyId(): string {
   if (!key) throw new Error("RAZORPAY_KEY_ID must be set.");
   return key;
 }
+
+// Verifies the `X-Razorpay-Signature` header on webhook deliveries. This uses
+// the webhook secret configured in the Razorpay Dashboard, which is distinct
+// from RAZORPAY_KEY_SECRET used for order/payment signature verification.
+export function verifyRazorpayWebhookSignature(rawBody: string, signature: string): boolean {
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  if (!secret) throw new Error("RAZORPAY_WEBHOOK_SECRET must be set.");
+  const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+  return expected === signature;
+}

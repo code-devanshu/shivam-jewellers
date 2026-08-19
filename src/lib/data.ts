@@ -3,14 +3,24 @@ import { unstable_cache } from "next/cache";
 import { mockMetals } from "./mock/data";
 import type { Category, Metal, MetalRate, Product } from "./types";
 import { getLiveRates } from "./live-rates";
-import { storeGetAllProducts, storeGetAllCategories, storeGetProductBySlug, storeGetFeaturedProducts, storeGetProductsPage } from "./admin-store";
+import {
+  storeGetAllProducts,
+  storeGetAllCategories,
+  storeGetProductBySlug,
+  storeGetFeaturedProducts,
+  storeGetProductsPage,
+} from "./admin-store";
 
 // ── Cross-request persistent caches ─────────────────────────────────────────
 // Revalidated by tag whenever admin saves/deletes, so the store never serves stale data.
 
-const _cachedCategories = unstable_cache(storeGetAllCategories, ["categories"], {
-  tags: ["categories"],
-});
+const _cachedCategories = unstable_cache(
+  storeGetAllCategories,
+  ["categories"],
+  {
+    tags: ["categories"],
+  },
+);
 
 const _cachedProducts = unstable_cache(storeGetAllProducts, ["products"], {
   tags: ["products"],
@@ -22,14 +32,22 @@ const _cachedProducts = unstable_cache(storeGetAllProducts, ["products"], {
 
 export const getCategories = cache(_cachedCategories);
 export const getAllProducts = cache(_cachedProducts);
-const _cachedProductBySlug = unstable_cache(storeGetProductBySlug, ["product-by-slug"], {
-  tags: ["products"],
-});
+const _cachedProductBySlug = unstable_cache(
+  storeGetProductBySlug,
+  ["product-by-slug"],
+  {
+    tags: ["products"],
+  },
+);
 export const getProductBySlug = cache(_cachedProductBySlug);
 
-const _cachedFeaturedProducts = unstable_cache(storeGetFeaturedProducts, ["featured-products"], {
-  tags: ["products"],
-});
+const _cachedFeaturedProducts = unstable_cache(
+  storeGetFeaturedProducts,
+  ["featured-products"],
+  {
+    tags: ["products"],
+  },
+);
 export const getFeaturedProducts = cache(_cachedFeaturedProducts);
 
 // Rate overrides/live rates hit the DB (up to 4 round-trips) on every call.
@@ -55,7 +73,7 @@ export const PRODUCTS_PAGE_SIZE = 6;
 
 export async function getProductsPage(
   filters: ProductFilters | undefined,
-  pagination: { skip: number; take: number }
+  pagination: { skip: number; take: number },
 ): Promise<{ products: Product[]; hasMore: boolean }> {
   const categories = await getCategories();
   const category = filters?.categorySlug
@@ -69,6 +87,6 @@ export async function getProductsPage(
       featured: filters?.featured,
       query: filters?.query,
     },
-    pagination
+    pagination,
   );
 }

@@ -547,15 +547,17 @@ export default function CheckoutClient({
 
                 <button
                   type="button"
-                  disabled
-                  aria-disabled="true"
-                  title="Online payments are temporarily unavailable"
-                  className="flex items-center gap-3 p-4 rounded-xl border-2 text-left transition border-blush bg-gray-50 opacity-60 cursor-not-allowed"
+                  onClick={() => setPaymentMethod("RAZORPAY")}
+                  className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition ${
+                    paymentMethod === "RAZORPAY"
+                      ? "border-rose-gold bg-blush/40"
+                      : "border-blush bg-white hover:border-rose-gold/50"
+                  }`}
                 >
-                  <Banknote size={20} className="text-brown/40 shrink-0" />
+                  <Banknote size={20} className={paymentMethod === "RAZORPAY" ? "text-rose-gold shrink-0" : "text-brown/40 shrink-0"} />
                   <div>
                     <p className="text-sm font-semibold text-brown-dark">Pay Online</p>
-                    <p className="text-xs text-brown/50 mt-0.5">Temporarily unavailable</p>
+                    <p className="text-xs text-brown/50 mt-0.5">Card, UPI, Netbanking</p>
                   </div>
                 </button>
               </div>
