@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 
 import { Suspense } from "react";
 import { ArrowRight, ShieldCheck, Star, Truck } from "lucide-react";
-import { getCategories, getFeaturedProducts, getCurrentRates } from "@/lib/data";
+import { getCategories, getFeaturedProducts, getCurrentRates, getActiveBanners } from "@/lib/data";
 import { getCustomerSession } from "@/lib/customer-auth";
 import { getWishlistedProductIds } from "@/lib/customer-store";
 import ProductCard from "@/components/store/ProductCard";
@@ -77,9 +77,10 @@ const websiteJsonLd = {
 };
 
 export default async function HomePage() {
-  const [customerId, categories] = await Promise.all([
+  const [customerId, categories, banners] = await Promise.all([
     getCustomerSession(),
     getCategories(),
+    getActiveBanners(),
   ]);
 
   return (
@@ -94,7 +95,7 @@ export default async function HomePage() {
       />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <HeroSection categories={categories} />
+      <HeroSection categories={categories} banners={banners} />
 
       {/* ── Shop by Category ─────────────────────────────────────────────── */}
       <section className="py-16 bg-cream">

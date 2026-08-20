@@ -1,6 +1,6 @@
 import { RateSource } from "@prisma/client";
 import { db } from "./db";
-import type { Product, Category } from "./types";
+import type { Product, Category, Banner } from "./types";
 
 // ── Products ─────────────────────────────────────────────────────────────────
 
@@ -233,6 +233,45 @@ export async function storeDeleteCategory(id: string): Promise<void> {
   await db.category.delete({ where: { id } });
 }
 
+// ── Banners ──────────────────────────────────────────────────────────────────
+
+export async function storeGetAllBanners(): Promise<Banner[]> {
+  const rows = await db.banner.findMany({ orderBy: { order: "asc" } });
+  return rows.map(mapBanner);
+}
+
+export async function storeGetActiveBanners(): Promise<Banner[]> {
+  const rows = await db.banner.findMany({
+    where: { isActive: true },
+    orderBy: { order: "asc" },
+  });
+  return rows.map(mapBanner);
+}
+
+export async function storeAddBanner(banner: Banner): Promise<void> {
+  await db.banner.create({
+    data: {
+      id: banner.id,
+      imageUrl: banner.imageUrl,
+      title: banner.title,
+      linkUrl: banner.linkUrl,
+      order: banner.order,
+      isActive: banner.isActive,
+    },
+  });
+}
+
+export async function storeUpdateBanner(
+  id: string,
+  updates: Partial<Banner>,
+): Promise<void> {
+  await db.banner.update({ where: { id }, data: updates });
+}
+
+export async function storeDeleteBanner(id: string): Promise<void> {
+  await db.banner.delete({ where: { id } });
+}
+
 // ── Rate Overrides (still in-memory — DB rates via MetalRate table later) ────
 
 export async function storeSetRateOverride(
@@ -351,5 +390,18 @@ function mapCategory(row: DbCategory): Category {
     imageUrls: row.imageUrls ?? [],
     order: row.order,
     showInNav: row.showInNav,
+  };
+}
+
+type DbBanner = Awaited<ReturnType<typeof db.banner.findMany>>[number];
+
+function mapBanner(row: DbBanner): Banner {
+  return {
+    id: row.id,
+    imageUrl: row.imageUrl,
+    title: row.title,
+    linkUrl: row.linkUrl,
+    order: row.order,
+    isActive: row.isActive,
   };
 }

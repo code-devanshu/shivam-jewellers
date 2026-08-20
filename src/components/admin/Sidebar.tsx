@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ExternalLink,
+  Image as ImageIcon,
   LayoutDashboard,
   LogOut,
   MessageSquare,
@@ -24,6 +25,7 @@ const NAV = [
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/rates", label: "Metal Rates", icon: TrendingUp },
   { href: "/admin/categories", label: "Categories", icon: Tag },
+  { href: "/admin/banners", label: "Banners", icon: ImageIcon },
   { href: "/admin/inquiries", label: "Inquiries", icon: MessageSquare },
 ];
 

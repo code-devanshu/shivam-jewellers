@@ -119,6 +119,19 @@ model Category {
   products    Product[]
 }
 
+// ─── Banners ──────────────────────────────────────────────────────────────────
+
+model Banner {
+  id        String   @id @default(cuid())
+  imageUrl  String
+  title     String?
+  linkUrl   String?
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // ─── Products ─────────────────────────────────────────────────────────────────
 
 model Product {

@@ -24,6 +24,15 @@ export type Category = {
   showInNav: boolean;
 };
 
+export type Banner = {
+  id: string;
+  imageUrl: string;
+  title: string | null;
+  linkUrl: string | null;
+  order: number;
+  isActive: boolean;
+};
+
 export type ProductImage = {
   id: string;
   productId: string;

@@ -1,11 +1,12 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { mockMetals } from "./mock/data";
-import type { Category, Metal, MetalRate, Product } from "./types";
+import type { Banner, Category, Metal, MetalRate, Product } from "./types";
 import { getLiveRates } from "./live-rates";
 import {
   storeGetAllProducts,
   storeGetAllCategories,
+  storeGetActiveBanners,
   storeGetProductBySlug,
   storeGetFeaturedProducts,
   storeGetProductsPage,
@@ -26,12 +27,21 @@ const _cachedProducts = unstable_cache(storeGetAllProducts, ["products"], {
   tags: ["products"],
 });
 
+const _cachedActiveBanners = unstable_cache(
+  storeGetActiveBanners,
+  ["active-banners"],
+  {
+    tags: ["banners"],
+  },
+);
+
 // ── Per-request deduplication ────────────────────────────────────────────────
 // React.cache() ensures that even if layout + page both call getCategories(),
 // the underlying cache is only consulted once per request.
 
 export const getCategories = cache(_cachedCategories);
 export const getAllProducts = cache(_cachedProducts);
+export const getActiveBanners = cache(_cachedActiveBanners);
 const _cachedProductBySlug = unstable_cache(
   storeGetProductBySlug,
   ["product-by-slug"],

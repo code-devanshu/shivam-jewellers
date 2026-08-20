@@ -1,25 +1,18 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
-import type { Category } from "@/lib/types";
+import type { Banner, Category } from "@/lib/types";
 
 type Props = {
   categories: Category[];
+  banners: Banner[];
 };
 
-export default function HeroSection({ categories }: Props) {
-  const slides = useMemo(
-    () =>
-      categories
-        .flatMap((c) => (c.imageUrls ?? []).slice(0, 1))
-        .filter(Boolean)
-        .slice(0, 6),
-    [categories],
-  );
-
+export default function HeroSection({ categories, banners }: Props) {
+  const slides = banners;
   const [current, setCurrent] = useState(0);
   // Only the current + next slide are mounted as <Image>s (not all of them),
   // so the carousel doesn't flood the initial load with images that compete
@@ -51,27 +44,37 @@ export default function HeroSection({ categories }: Props) {
       {/* ── Background carousel ───────────────────────────────────── */}
       {slides.length > 0 && (
         <div className="absolute inset-0">
-          {slides.map((url, i) => (
-            <div
-              key={url}
-              className="absolute inset-0"
-              style={{
-                opacity: i === current ? 1 : 0,
-                transition: "opacity 1.2s ease-in-out",
-              }}
-            >
-              {loadedSlides.has(i) && (
-                <Image
-                  src={url}
-                  alt=""
-                  fill
-                  className="object-cover object-center"
-                  priority={i === 0}
-                  sizes="100vw"
-                />
-              )}
-            </div>
-          ))}
+          {slides.map((banner, i) => {
+            const image = loadedSlides.has(i) && (
+              <Image
+                src={banner.imageUrl}
+                alt={banner.title ?? ""}
+                fill
+                className="object-cover object-center"
+                priority={i === 0}
+                sizes="100vw"
+              />
+            );
+            const style = {
+              opacity: i === current ? 1 : 0,
+              transition: "opacity 1.2s ease-in-out",
+            };
+            return banner.linkUrl ? (
+              <Link
+                key={banner.id}
+                href={banner.linkUrl}
+                className="absolute inset-0 block"
+                style={style}
+                aria-label={banner.title ?? "Featured banner"}
+              >
+                {image}
+              </Link>
+            ) : (
+              <div key={banner.id} className="absolute inset-0" style={style}>
+                {image}
+              </div>
+            );
+          })}
 
           {/* Warm dark overlay — matches site's brown tone, not cold black */}
           <div
