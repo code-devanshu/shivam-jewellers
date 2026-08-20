@@ -3,8 +3,10 @@
 import { useSyncExternalStore } from "react";
 import Script from "next/script";
 import Link from "next/link";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "1083951127307391";
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_ID;
 const CONSENT_KEY = "cookie_consent";
 
 type Consent = "granted" | "denied" | null;
@@ -37,6 +39,7 @@ export default function CookieConsent() {
     <>
       {consent === "granted" && (
         <>
+          {GA_MEASUREMENT_ID && <GoogleAnalytics gaId={GA_MEASUREMENT_ID} />}
           <Script id="meta-pixel" strategy="afterInteractive">
             {`
               !function(f,b,e,v,n,t,s)

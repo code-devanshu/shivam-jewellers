@@ -39,7 +39,10 @@ function BannerModal({
           <h2 className="font-semibold text-brown-dark">
             {banner ? "Edit Banner" : "Add Banner"}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
             <X size={18} />
           </button>
         </div>
@@ -55,14 +58,23 @@ function BannerModal({
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
               Image *
             </label>
-            <ImageUploader name="imageUrl" defaultUrl={banner?.imageUrl ?? ""} />
+
+            <ImageUploader
+              name="imageUrl"
+              defaultUrl={banner?.imageUrl ?? ""}
+            />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
               Title (alt text)
             </label>
-            <input name="title" defaultValue={banner?.title ?? ""} className={inputCls} placeholder="e.g. Diwali Collection" />
+            <input
+              name="title"
+              defaultValue={banner?.title ?? ""}
+              className={inputCls}
+              placeholder="e.g. Diwali Collection"
+            />
           </div>
 
           <div>
@@ -81,7 +93,12 @@ function BannerModal({
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
               Display Order
             </label>
-            <input name="order" type="number" className={inputCls} defaultValue={banner?.order ?? 0} />
+            <input
+              name="order"
+              type="number"
+              className={inputCls}
+              defaultValue={banner?.order ?? 0}
+            />
           </div>
 
           <div className="flex items-center gap-3">
@@ -92,13 +109,20 @@ function BannerModal({
               defaultChecked={banner?.isActive ?? true}
               className="w-4 h-4 accent-rose-gold rounded"
             />
-            <label htmlFor="isActive" className="text-sm text-brown-dark font-medium cursor-pointer">
+            <label
+              htmlFor="isActive"
+              className="text-sm text-brown-dark font-medium cursor-pointer"
+            >
               Active (shown on homepage)
             </label>
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-5 py-2 text-sm text-gray-500 hover:text-gray-700 font-medium transition-colors">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2 text-sm text-gray-500 hover:text-gray-700 font-medium transition-colors"
+            >
               Cancel
             </button>
             <button
@@ -149,7 +173,9 @@ export default function BannersClient({ banners }: { banners: Banner[] }) {
     <div className="p-8 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-serif font-bold text-brown-dark">Banners</h1>
+          <h1 className="text-2xl font-serif font-bold text-brown-dark">
+            Banners
+          </h1>
           <p className="text-sm text-gray-400 mt-1">
             {sorted.length} total · shown in the homepage hero carousel
           </p>
@@ -167,8 +193,12 @@ export default function BannersClient({ banners }: { banners: Banner[] }) {
           <thead>
             <tr className="text-xs text-gray-400 uppercase tracking-wide bg-gray-50 border-b border-gray-100">
               <th className="text-left px-5 py-3 font-medium">Banner</th>
-              <th className="text-left px-5 py-3 font-medium hidden md:table-cell">Link</th>
-              <th className="text-left px-5 py-3 font-medium hidden md:table-cell">Order</th>
+              <th className="text-left px-5 py-3 font-medium hidden md:table-cell">
+                Link
+              </th>
+              <th className="text-left px-5 py-3 font-medium hidden md:table-cell">
+                Order
+              </th>
               <th className="text-left px-5 py-3 font-medium">Active</th>
               <th className="px-5 py-3" />
             </tr>
@@ -176,7 +206,10 @@ export default function BannersClient({ banners }: { banners: Banner[] }) {
           <tbody className="divide-y divide-gray-50">
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-5 py-10 text-center text-gray-400 text-sm">
+                <td
+                  colSpan={5}
+                  className="px-5 py-10 text-center text-gray-400 text-sm"
+                >
                   No banners yet. Add one to populate the homepage carousel.
                 </td>
               </tr>
@@ -185,7 +218,10 @@ export default function BannersClient({ banners }: { banners: Banner[] }) {
               <tr key={banner.id} className="hover:bg-gray-50/50">
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-3">
-                    <GripVertical size={14} className="text-gray-200 shrink-0 hidden sm:block" />
+                    <GripVertical
+                      size={14}
+                      className="text-gray-200 shrink-0 hidden sm:block"
+                    />
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={banner.imageUrl}
@@ -193,14 +229,20 @@ export default function BannersClient({ banners }: { banners: Banner[] }) {
                       className="w-16 h-10 rounded-lg object-cover border border-gray-100 shrink-0"
                     />
                     <div className="font-medium text-brown-dark truncate max-w-40">
-                      {banner.title || <span className="text-gray-300 italic font-normal">Untitled</span>}
+                      {banner.title || (
+                        <span className="text-gray-300 italic font-normal">
+                          Untitled
+                        </span>
+                      )}
                     </div>
                   </div>
                 </td>
                 <td className="px-5 py-3 text-gray-400 font-mono text-xs hidden md:table-cell truncate max-w-40">
                   {banner.linkUrl || "—"}
                 </td>
-                <td className="px-5 py-3 text-gray-400 hidden md:table-cell">{banner.order}</td>
+                <td className="px-5 py-3 text-gray-400 hidden md:table-cell">
+                  {banner.order}
+                </td>
                 <td className="px-5 py-3">
                   <ActiveToggle banner={banner} />
                 </td>
@@ -220,7 +262,8 @@ export default function BannersClient({ banners }: { banners: Banner[] }) {
                         className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
                         aria-label="Delete"
                         onClick={(e) => {
-                          if (!confirm("Delete this banner?")) e.preventDefault();
+                          if (!confirm("Delete this banner?"))
+                            e.preventDefault();
                         }}
                       >
                         <Trash2 size={15} />
