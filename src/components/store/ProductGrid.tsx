@@ -16,16 +16,16 @@ type Props = {
   initialProducts: Product[];
   initialHasMore: boolean;
   filters: Filters;
-  rateMap: Record<string, number>;
-  wishlistedIds: string[];
+  ratePromise: Promise<Record<string, number>>;
+  wishlistedIdsPromise: Promise<string[]>;
 };
 
 export default function ProductGrid({
   initialProducts,
   initialHasMore,
   filters,
-  rateMap,
-  wishlistedIds,
+  ratePromise,
+  wishlistedIdsPromise,
 }: Props) {
   const [products, setProducts] = useState(initialProducts);
   const [hasMore, setHasMore] = useState(initialHasMore);
@@ -61,8 +61,8 @@ export default function ProductGrid({
           <ProductCard
             key={product.id}
             product={product}
-            ratePerGram={rateMap[product.metalId] ?? 0}
-            isWishlisted={wishlistedIds.includes(product.id)}
+            ratePromise={ratePromise}
+            wishlistedIdsPromise={wishlistedIdsPromise}
             priority={idx < 3}
           />
         ))}

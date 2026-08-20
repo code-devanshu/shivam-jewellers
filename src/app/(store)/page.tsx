@@ -208,8 +208,8 @@ async function FeaturedCollection({ customerId }: { customerId: string | null })
             <ProductCard
               key={product.id}
               product={product}
-              ratePerGram={rateMap[product.metalId] ?? 0}
-              isWishlisted={wishlistedIds.includes(product.id)}
+              ratePromise={Promise.resolve(rateMap)}
+              wishlistedIdsPromise={Promise.resolve(wishlistedIds)}
             />
           ))}
         </div>

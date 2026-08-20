@@ -1,9 +1,11 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getProductBySlug, getCurrentRates, getAllProducts } from "@/lib/data";
 import { getCustomerSession } from "@/lib/customer-auth";
 import { getWishlistedProductIds } from "@/lib/customer-store";
 import { calculatePrice } from "@/lib/price";
 import ProductDetail from "@/components/store/ProductDetail";
+import type { Product } from "@/lib/types";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -43,26 +45,16 @@ export async function generateMetadata({ params }: Props) {
   };
 }
 
-export default async function ProductPage({ params }: Props) {
-  const { slug } = await params;
-
-  const [product, rates, customerId] = await Promise.all([
-    getProductBySlug(slug),
-    getCurrentRates(),
-    getCustomerSession(),
-  ]);
-
-  if (!product) notFound();
-
-  const ratePerGram =
-    rates.find((r) => r.metalId === product.metalId)?.ratePerGram ?? 0;
-
-  let isWishlisted = false;
-  if (customerId) {
-    const ids = await getWishlistedProductIds(customerId);
-    isWishlisted = ids.includes(product.id);
-  }
-
+// Awaits the (potentially slow) rate lookup on its own so the rest of the page
+// doesn't have to block on it — streamed in via the Suspense boundary below.
+async function ProductJsonLd({
+  product,
+  ratePromise,
+}: {
+  product: Product;
+  ratePromise: Promise<number>;
+}) {
+  const ratePerGram = await ratePromise;
   const { totalPrice } = calculatePrice(product, ratePerGram);
 
   const productJsonLd = {
@@ -87,16 +79,44 @@ export default async function ProductPage({ params }: Props) {
   };
 
   return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+    />
+  );
+}
+
+export default async function ProductPage({ params }: Props) {
+  const { slug } = await params;
+
+  // Only the product itself (cheap, cached lookup) and the session (cookie read,
+  // no DB hit) block the page. The live rate and wishlist DB lookups are started
+  // here but not awaited — they stream in below their own Suspense boundaries so
+  // the breadcrumb/gallery/name paint immediately instead of waiting on them.
+  const [product, customerId] = await Promise.all([
+    getProductBySlug(slug),
+    getCustomerSession(),
+  ]);
+
+  if (!product) notFound();
+
+  const ratePromise = getCurrentRates().then(
+    (rates) => rates.find((r) => r.metalId === product.metalId)?.ratePerGram ?? 0
+  );
+  const wishlistPromise = customerId
+    ? getWishlistedProductIds(customerId).then((ids) => ids.includes(product.id))
+    : Promise.resolve(false);
+
+  return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
-      />
+      <Suspense fallback={null}>
+        <ProductJsonLd product={product} ratePromise={ratePromise} />
+      </Suspense>
       <ProductDetail
         product={product}
-        ratePerGram={ratePerGram}
+        ratePromise={ratePromise}
         customerId={customerId}
-        isWishlisted={isWishlisted}
+        wishlistPromise={wishlistPromise}
       />
     </>
   );

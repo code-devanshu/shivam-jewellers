@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { Suspense, use, useState, useTransition } from "react";
 import { Heart, ShoppingBag, Check } from "lucide-react";
 import { toast } from "sonner";
 import type { Product } from "@/lib/types";
@@ -15,20 +15,52 @@ import { errorToastStyle } from "@/lib/toast-styles";
 
 type Props = {
   product: Product;
-  ratePerGram: number;
-  isWishlisted?: boolean;
+  ratePromise: Promise<Record<string, number>>;
+  wishlistedIdsPromise: Promise<string[]>;
   priority?: boolean;
 };
 
-export default function ProductCard({ product, ratePerGram, isWishlisted: initialWishlisted = false, priority = false }: Props) {
-  const primary = product.images.find((img) => img.isPrimary) ?? product.images[0];
-  const { totalPrice } = calculatePrice(product, ratePerGram);
-  const [cartState, setCartState] = useState<"idle" | "adding" | "added">("idle");
-  const [wishlisted, setWishlisted] = useState(initialWishlisted);
-  const [, startTransition] = useTransition();
+function PriceSkeleton() {
+  return <div className="h-4 w-16 bg-blush/60 rounded-full animate-pulse" />;
+}
+
+function ProductPrice({
+  product,
+  ratePromise,
+}: {
+  product: Product;
+  ratePromise: Promise<Record<string, number>>;
+}) {
+  const rateMap = use(ratePromise);
+  const { totalPrice } = calculatePrice(product, rateMap[product.metalId] ?? 0);
+  return (
+    <span className="text-base font-bold text-rose-gold-dark">
+      {formatPrice(totalPrice)}
+    </span>
+  );
+}
+
+function WishlistHeartSkeleton() {
+  return (
+    <div
+      aria-hidden
+      className="absolute top-3 right-3 p-1.5 backdrop-blur-sm rounded-full shadow-sm bg-white/80 text-rose-gold"
+    >
+      <Heart size={15} />
+    </div>
+  );
+}
+
+function WishlistHeart({
+  product,
+  wishlistedIdsPromise,
+}: {
+  product: Product;
+  wishlistedIdsPromise: Promise<string[]>;
+}) {
+  const wishlistedIds = use(wishlistedIdsPromise);
+  const [wishlisted, setWishlisted] = useState(wishlistedIds.includes(product.id));
   const [, startWishlistTransition] = useTransition();
-  const { increment, showFlyout } = useCart();
-  const outOfStock = !product.isAvailable;
 
   function handleToggleWishlist(e: React.MouseEvent) {
     e.preventDefault();
@@ -48,6 +80,28 @@ export default function ProductCard({ product, ratePerGram, isWishlisted: initia
     });
   }
 
+  return (
+    <button
+      className={`absolute top-3 right-3 p-1.5 backdrop-blur-sm rounded-full transition-colors shadow-sm ${
+        wishlisted
+          ? "bg-rose-gold text-white hover:bg-rose-gold-dark"
+          : "bg-white/80 text-rose-gold hover:bg-white"
+      }`}
+      aria-label="Toggle wishlist"
+      onClick={handleToggleWishlist}
+    >
+      <Heart size={15} fill={wishlisted ? "currentColor" : "none"} />
+    </button>
+  );
+}
+
+export default function ProductCard({ product, ratePromise, wishlistedIdsPromise, priority = false }: Props) {
+  const primary = product.images.find((img) => img.isPrimary) ?? product.images[0];
+  const [cartState, setCartState] = useState<"idle" | "adding" | "added">("idle");
+  const [, startTransition] = useTransition();
+  const { increment, showFlyout } = useCart();
+  const outOfStock = !product.isAvailable;
+
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -59,6 +113,8 @@ export default function ProductCard({ product, ratePerGram, isWishlisted: initia
         setCartState("added");
         setTimeout(() => setCartState("idle"), 2000);
         increment(1);
+        const rateMap = await ratePromise;
+        const { totalPrice } = calculatePrice(product, rateMap[product.metalId] ?? 0);
         showFlyout({
           name: product.name,
           imageUrl: primary?.url ?? null,
@@ -97,17 +153,9 @@ export default function ProductCard({ product, ratePerGram, isWishlisted: initia
           )}
 
           {/* Wishlist button */}
-          <button
-            className={`absolute top-3 right-3 p-1.5 backdrop-blur-sm rounded-full transition-colors shadow-sm ${
-              wishlisted
-                ? "bg-rose-gold text-white hover:bg-rose-gold-dark"
-                : "bg-white/80 text-rose-gold hover:bg-white"
-            }`}
-            aria-label="Toggle wishlist"
-            onClick={handleToggleWishlist}
-          >
-            <Heart size={15} fill={wishlisted ? "currentColor" : "none"} />
-          </button>
+          <Suspense fallback={<WishlistHeartSkeleton />}>
+            <WishlistHeart product={product} wishlistedIdsPromise={wishlistedIdsPromise} />
+          </Suspense>
 
           {product.isFeatured && (
             <span className="absolute top-3 left-3 px-2 py-0.5 bg-rose-gold text-white text-[10px] font-semibold rounded-full uppercase tracking-wide">
@@ -152,9 +200,9 @@ export default function ProductCard({ product, ratePerGram, isWishlisted: initia
             {product.name}
           </h3>
           <div className="flex items-center justify-between">
-            <span className="text-base font-bold text-rose-gold-dark">
-              {formatPrice(totalPrice)}
-            </span>
+            <Suspense fallback={<PriceSkeleton />}>
+              <ProductPrice product={product} ratePromise={ratePromise} />
+            </Suspense>
             <span className="text-xs text-brown/40">{product.weightGrams}g</span>
           </div>
         </div>

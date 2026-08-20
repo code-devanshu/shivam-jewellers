@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { Suspense, use, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronDown,
@@ -24,16 +24,166 @@ import { errorToastStyle } from "@/lib/toast-styles";
 
 type Props = {
   product: Product;
-  ratePerGram: number;
+  ratePromise: Promise<number>;
   customerId: string | null;
-  isWishlisted: boolean;
+  wishlistPromise: Promise<boolean>;
 };
+
+function PriceCardSkeleton() {
+  return (
+    <div className="bg-cream border border-blush rounded-2xl p-5 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="h-9 w-36 rounded-lg bg-blush/70 animate-pulse" />
+        <div className="h-4 w-28 rounded-lg bg-blush/70 animate-pulse" />
+      </div>
+      <div className="h-3 w-64 rounded-lg bg-blush/70 animate-pulse" />
+    </div>
+  );
+}
+
+function PriceCard({
+  product,
+  ratePromise,
+  additionalPrice,
+}: {
+  product: Product;
+  ratePromise: Promise<number>;
+  additionalPrice: number;
+}) {
+  const ratePerGram = use(ratePromise);
+  const [showBreakdown, setShowBreakdown] = useState(false);
+  const breakdown = calculatePrice(product, ratePerGram, additionalPrice);
+
+  return (
+    <div className="bg-cream border border-blush rounded-2xl p-5">
+      <div className="flex items-center justify-between">
+        <span className="text-3xl font-bold text-rose-gold-dark">
+          {formatPrice(breakdown.totalPrice)}
+        </span>
+        <button
+          onClick={() => setShowBreakdown((v) => !v)}
+          className="flex items-center gap-1 text-xs text-rose-gold hover:text-rose-gold-dark font-medium transition-colors"
+        >
+          Price breakdown{" "}
+          {showBreakdown ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+        </button>
+      </div>
+      <p className="text-xs text-brown/50 mt-1">
+        Inclusive of GST · Calculated at today&apos;s {product.metal.name.toLowerCase()} rate (
+        {formatPrice(ratePerGram)}/g)
+      </p>
+
+      {showBreakdown && (
+        <div className="border-t border-blush mt-4 pt-4 space-y-2 text-sm">
+          <div className="flex justify-between text-brown/70">
+            <span>
+              Metal value ({product.metal.symbol} @ {formatPrice(ratePerGram)}/g
+              × {product.weightGrams}g × {product.purity})
+            </span>
+            <span className="font-medium shrink-0 pl-4">
+              {formatPrice(breakdown.metalValue)}
+            </span>
+          </div>
+          <div className="flex justify-between text-brown/70">
+            <span>
+              Making charge (
+              {product.makingChargeType === "PERCENT"
+                ? `${product.makingCharge}%`
+                : "Fixed"}
+              )
+            </span>
+            <span className="font-medium shrink-0 pl-4">
+              {formatPrice(breakdown.makingAmount)}
+            </span>
+          </div>
+          {additionalPrice > 0 && (
+            <div className="flex justify-between text-brown/70">
+              <span>Variant premium</span>
+              <span className="font-medium shrink-0 pl-4">
+                {formatPrice(additionalPrice)}
+              </span>
+            </div>
+          )}
+          <div className="flex justify-between text-brown/70">
+            <span>GST ({product.gstPercent}%)</span>
+            <span className="font-medium shrink-0 pl-4">
+              {formatPrice(breakdown.gstAmount)}
+            </span>
+          </div>
+          <div className="flex justify-between font-bold text-brown-dark border-t border-blush pt-2">
+            <span>Total</span>
+            <span>{formatPrice(breakdown.totalPrice)}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WishlistButtonSkeleton() {
+  return (
+    <div
+      aria-hidden
+      className="p-3.5 rounded-full border-2 border-blush text-rose-gold/30 animate-pulse"
+    >
+      <Heart size={20} />
+    </div>
+  );
+}
+
+function WishlistButton({
+  product,
+  customerId,
+  wishlistPromise,
+}: {
+  product: Product;
+  customerId: string | null;
+  wishlistPromise: Promise<boolean>;
+}) {
+  const initialWishlisted = use(wishlistPromise);
+  const { openAuthModal } = useAuthModal();
+  const [wishlisted, setWishlisted] = useState(initialWishlisted);
+  const [, startWishlistTransition] = useTransition();
+
+  const handleToggleWishlist = () => {
+    if (!customerId) {
+      openAuthModal(`/products/${product.slug}`);
+      return;
+    }
+    const next = !wishlisted;
+    setWishlisted(next);
+    startWishlistTransition(async () => {
+      try {
+        const confirmed = await toggleWishlist(product.id);
+        setWishlisted(confirmed);
+        toast.success(confirmed ? "Added to wishlist" : "Removed from wishlist");
+      } catch (e) {
+        if (isRedirectError(e)) throw e;
+        setWishlisted(!next);
+      }
+    });
+  };
+
+  return (
+    <button
+      onClick={handleToggleWishlist}
+      className={`p-3.5 rounded-full border-2 transition-all ${
+        wishlisted
+          ? "bg-rose-gold border-rose-gold text-white"
+          : "border-blush text-rose-gold hover:bg-blush"
+      }`}
+      aria-label="Toggle wishlist"
+    >
+      <Heart size={20} fill={wishlisted ? "currentColor" : "none"} />
+    </button>
+  );
+}
 
 export default function ProductDetail({
   product,
-  ratePerGram,
+  ratePromise,
   customerId,
-  isWishlisted: initialWishlisted,
+  wishlistPromise,
 }: Props) {
   const router = useRouter();
   const { openAuthModal } = useAuthModal();
@@ -42,15 +192,11 @@ export default function ProductDetail({
     product.variants[0] ?? null
   );
   const [variantChosen, setVariantChosen] = useState(product.variants.length <= 1);
-  const [showBreakdown, setShowBreakdown] = useState(false);
   const [cartState, setCartState] = useState<"idle" | "adding" | "added">("idle");
   const [buyState, setBuyState] = useState<"idle" | "pending">("idle");
-  const [wishlisted, setWishlisted] = useState(initialWishlisted);
   const [, startCartTransition] = useTransition();
-  const [, startWishlistTransition] = useTransition();
 
   const additionalPrice = selectedVariant?.additionalPrice ?? 0;
-  const breakdown = calculatePrice(product, ratePerGram, additionalPrice);
   const primaryImage = product.images.find((i) => i.isPrimary) ?? product.images[0];
   const outOfStock = !product.isAvailable;
   const needsVariantSelection = !variantChosen;
@@ -80,6 +226,8 @@ export default function ProductDetail({
         setCartState("added");
         setTimeout(() => setCartState("idle"), 2200);
         increment(1);
+        const ratePerGram = await ratePromise;
+        const breakdown = calculatePrice(product, ratePerGram, additionalPrice);
         showFlyout({
           name: product.name,
           imageUrl: primaryImage?.url ?? null,
@@ -107,25 +255,6 @@ export default function ProductDetail({
     const qs = new URLSearchParams({ buyNow: product.id });
     if (selectedVariant?.id) qs.set("variant", selectedVariant.id);
     router.push(`/checkout?${qs.toString()}`);
-  };
-
-  const handleToggleWishlist = () => {
-    if (!customerId) {
-      openAuthModal(`/products/${product.slug}`);
-      return;
-    }
-    const next = !wishlisted;
-    setWishlisted(next);
-    startWishlistTransition(async () => {
-      try {
-        const confirmed = await toggleWishlist(product.id);
-        setWishlisted(confirmed);
-        toast.success(confirmed ? "Added to wishlist" : "Removed from wishlist");
-      } catch (e) {
-        if (isRedirectError(e)) throw e;
-        setWishlisted(!next);
-      }
-    });
   };
 
   return (
@@ -193,69 +322,14 @@ export default function ProductDetail({
             </div>
           </div>
 
-          {/* Price card */}
-          <div className="bg-cream border border-blush rounded-2xl p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-3xl font-bold text-rose-gold-dark">
-                {formatPrice(breakdown.totalPrice)}
-              </span>
-              <button
-                onClick={() => setShowBreakdown((v) => !v)}
-                className="flex items-center gap-1 text-xs text-rose-gold hover:text-rose-gold-dark font-medium transition-colors"
-              >
-                Price breakdown{" "}
-                {showBreakdown ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-              </button>
-            </div>
-            <p className="text-xs text-brown/50 mt-1">
-              Inclusive of GST · Calculated at today's {product.metal.name.toLowerCase()} rate (
-              {formatPrice(ratePerGram)}/g)
-            </p>
-
-            {showBreakdown && (
-              <div className="border-t border-blush mt-4 pt-4 space-y-2 text-sm">
-                <div className="flex justify-between text-brown/70">
-                  <span>
-                    Metal value ({product.metal.symbol} @ {formatPrice(ratePerGram)}/g
-                    × {product.weightGrams}g × {product.purity})
-                  </span>
-                  <span className="font-medium shrink-0 pl-4">
-                    {formatPrice(breakdown.metalValue)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-brown/70">
-                  <span>
-                    Making charge (
-                    {product.makingChargeType === "PERCENT"
-                      ? `${product.makingCharge}%`
-                      : "Fixed"}
-                    )
-                  </span>
-                  <span className="font-medium shrink-0 pl-4">
-                    {formatPrice(breakdown.makingAmount)}
-                  </span>
-                </div>
-                {additionalPrice > 0 && (
-                  <div className="flex justify-between text-brown/70">
-                    <span>Variant premium</span>
-                    <span className="font-medium shrink-0 pl-4">
-                      {formatPrice(additionalPrice)}
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between text-brown/70">
-                  <span>GST ({product.gstPercent}%)</span>
-                  <span className="font-medium shrink-0 pl-4">
-                    {formatPrice(breakdown.gstAmount)}
-                  </span>
-                </div>
-                <div className="flex justify-between font-bold text-brown-dark border-t border-blush pt-2">
-                  <span>Total</span>
-                  <span>{formatPrice(breakdown.totalPrice)}</span>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Price card — streams in once the live rate resolves */}
+          <Suspense fallback={<PriceCardSkeleton />}>
+            <PriceCard
+              product={product}
+              ratePromise={ratePromise}
+              additionalPrice={additionalPrice}
+            />
+          </Suspense>
 
           {/* Size selector */}
           {sizes.length > 0 && (
@@ -362,17 +436,13 @@ export default function ProductDetail({
                   ? "Added to Cart!"
                   : "Add to Cart"}
               </button>
-              <button
-                onClick={handleToggleWishlist}
-                className={`p-3.5 rounded-full border-2 transition-all ${
-                  wishlisted
-                    ? "bg-rose-gold border-rose-gold text-white"
-                    : "border-blush text-rose-gold hover:bg-blush"
-                }`}
-                aria-label="Toggle wishlist"
-              >
-                <Heart size={20} fill={wishlisted ? "currentColor" : "none"} />
-              </button>
+              <Suspense fallback={<WishlistButtonSkeleton />}>
+                <WishlistButton
+                  product={product}
+                  customerId={customerId}
+                  wishlistPromise={wishlistPromise}
+                />
+              </Suspense>
             </div>
           </div>
 

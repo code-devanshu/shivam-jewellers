@@ -56,15 +56,23 @@ export default async function ProductsPage({ searchParams }: Props) {
     query: params.q,
   };
 
-  const [categories, metals, rates, { products, hasMore }, wishlistedIds] = await Promise.all([
+  // Only the filter data and the product list itself (needed to render the page
+  // shell correctly) block the response. Rates and wishlist state are real DB
+  // round-trips that only decorate each card — kicked off here but not awaited,
+  // so they stream in per-card via Suspense instead of gating the whole grid.
+  const [categories, metals, { products, hasMore }] = await Promise.all([
     getCategories(),
     getMetals(),
-    getCurrentRates(),
     getProductsPage(filters, { skip: 0, take: PRODUCTS_PAGE_SIZE }),
-    customerId ? getWishlistedProductIds(customerId) : Promise.resolve([]),
   ]);
 
-  const rateMap = Object.fromEntries(rates.map((r) => [r.metalId, r.ratePerGram]));
+  const rateMapPromise = getCurrentRates().then((rates) =>
+    Object.fromEntries(rates.map((r) => [r.metalId, r.ratePerGram]))
+  );
+  const wishlistedIdsPromise = customerId
+    ? getWishlistedProductIds(customerId)
+    : Promise.resolve([]);
+
   const activeCategory = categories.find((c) => c.slug === params.category);
   const activeMetal = metals.find((m) => m.id === params.metal);
 
@@ -229,8 +237,8 @@ export default async function ProductsPage({ searchParams }: Props) {
               initialProducts={products}
               initialHasMore={hasMore}
               filters={filters}
-              rateMap={rateMap}
-              wishlistedIds={wishlistedIds}
+              ratePromise={rateMapPromise}
+              wishlistedIdsPromise={wishlistedIdsPromise}
             />
           )}
         </div>
