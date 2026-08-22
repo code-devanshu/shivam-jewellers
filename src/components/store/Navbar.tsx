@@ -228,7 +228,7 @@ export default function Navbar({ categories, trendingProducts, cartCount, wishli
       <div className="hidden sm:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div
-            className="flex items-center overflow-x-auto"
+            className="flex items-center overflow-x-auto no-scrollbar"
             style={{ scrollbarWidth: "none" }}
           >
             <Link

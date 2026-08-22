@@ -58,7 +58,7 @@ export default function AlsoPurchasedCarousel({ products, ratePromise, wishliste
 
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory"
+        className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory no-scrollbar"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {products.map((product) => (

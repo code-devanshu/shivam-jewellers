@@ -34,7 +34,7 @@ export default function ContactPage() {
         <p className="text-rose-gold text-xs font-semibold uppercase tracking-widest mb-2">
           ✦ We&apos;d love to hear from you
         </p>
-        <h1 className="text-4xl font-serif font-bold text-brown-dark mb-3">
+        <h1 className="text-3xl sm:text-4xl font-serif font-bold text-brown-dark mb-3">
           Get in Touch
         </h1>
         <p className="text-brown/60 max-w-md mx-auto text-sm leading-relaxed">

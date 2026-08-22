@@ -9,6 +9,7 @@ import {
   getServerSnapshot,
   setDeliveryPincode,
 } from "@/lib/deliveryLocation";
+import { useIsClient } from "@/lib/useIsClient";
 
 const TOAST_STYLE = {
   background: "#fff",
@@ -32,6 +33,10 @@ export default function DeliveryLocationButton({
   const [locating, setLocating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  // Defer swapping between "unset" and "Fast Delivery to X" until after
+  // hydration settles on the real localStorage value, so a returning visitor
+  // never sees the pincode flash to "unset" and back on reload.
+  const mounted = useIsClient();
 
   useEffect(() => {
     if (!open) return;
@@ -115,59 +120,72 @@ export default function DeliveryLocationButton({
 
   return (
     <div ref={wrapperRef} className={`relative shrink-0 ${className}`}>
-      <button
-        type="button"
-        onClick={() => {
-          setOpen((v) => {
-            const next = !v;
-            if (next) {
-              setManualValue(stored?.pincode ?? "");
-              setManualError(null);
-            }
-            return next;
-          });
-        }}
-        className={
-          stored?.pincode
-            ? "flex items-center gap-1.5 pl-0 sm:pl-2.5 pr-2 py-1.5 rounded-none sm:rounded-lg sm:border border-rose-gold/30 hover:border-rose-gold/60 transition-colors"
-            : "flex items-center gap-2 py-1 sm:py-2 sm:px-3 rounded-none sm:rounded-lg sm:border sm:border-gray-200  sm:hover:border-rose-gold/40 transition-colors"
-        }
-      >
-        {stored?.pincode ? (
-          <>
-            <Zap
-              size={16}
-              className="text-rose-gold-dark fill-rose-gold-dark shrink-0"
-            />
-            <span className="leading-tight text-left">
-              <span className="hidden sm:block text-[10px] text-brown/50 whitespace-nowrap">
-                Where to Deliver?
+      {!mounted ? (
+        // Real value isn't known until localStorage is read on the client —
+        // render a neutral skeleton instead of asserting "unset", so a
+        // returning visitor never sees the pincode flash to unset and back.
+        <div className="flex items-center gap-2 py-1 sm:py-2 sm:px-3 h-[42px] sm:h-[46px]">
+          <div className="size-4 rounded-full bg-blush/60 shrink-0 animate-pulse" />
+          <span className="hidden sm:flex flex-col gap-1">
+            <span className="h-2 w-20 rounded-full bg-blush/60 animate-pulse" />
+            <span className="h-2.5 w-28 rounded-full bg-blush/60 animate-pulse" />
+          </span>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setOpen((v) => {
+              const next = !v;
+              if (next) {
+                setManualValue(stored?.pincode ?? "");
+                setManualError(null);
+              }
+              return next;
+            });
+          }}
+          className={
+            stored?.pincode
+              ? "flex items-center gap-1.5 pl-0 sm:pl-2.5 pr-2 py-1.5 rounded-none sm:rounded-lg sm:border border-rose-gold/30 hover:border-rose-gold/60 transition-colors"
+              : "flex items-center gap-2 py-1 sm:py-2 sm:px-3 rounded-none sm:rounded-lg sm:border sm:border-gray-200  sm:hover:border-rose-gold/40 transition-colors"
+          }
+        >
+          {stored?.pincode ? (
+            <>
+              <Zap
+                size={16}
+                className="text-rose-gold-dark fill-rose-gold-dark shrink-0"
+              />
+              <span className="leading-tight text-left">
+                <span className="hidden sm:block text-[10px] text-brown/50 whitespace-nowrap">
+                  Where to Deliver?
+                </span>
+                <span className="block text-xs font-semibold text-brown-dark whitespace-nowrap">
+                  Fast Delivery to {stored.pincode}
+                </span>
               </span>
-              <span className="block text-xs font-semibold text-brown-dark whitespace-nowrap">
-                Fast Delivery to {stored.pincode}
+            </>
+          ) : (
+            <>
+              <MapPin size={16} className="text-rose-gold shrink-0" />
+              <span className="leading-tight text-left">
+                <span className="hidden sm:block text-[10px] text-brown/50 whitespace-nowrap">
+                  Where to Deliver?
+                </span>
+                <span className="block text-xs font-semibold text-brown-dark whitespace-nowrap">
+                  Update Delivery Pincode
+                </span>
               </span>
-            </span>
-          </>
-        ) : (
-          <>
-            <MapPin size={16} className="text-rose-gold shrink-0" />
-            <span className="leading-tight text-left">
-              <span className="hidden sm:block text-[10px] text-brown/50 whitespace-nowrap">
-                Where to Deliver?
-              </span>
-              <span className="block text-xs font-semibold text-brown-dark whitespace-nowrap">
-                Update Delivery Pincode
-              </span>
-            </span>
-          </>
-        )}
-        <ChevronDown
-          size={14}
-          className={`shrink-0 transition-transform ${open ? "rotate-180" : ""} ${
-            stored?.pincode ? "text-rose-gold-dark" : "text-gray-400"
-          }`}
-        />
-      </button>
+            </>
+          )}
+          <ChevronDown
+            size={14}
+            className={`shrink-0 transition-transform ${open ? "rotate-180" : ""} ${
+              stored?.pincode ? "text-rose-gold-dark" : "text-gray-400"
+            }`}
+          />
+        </button>
+      )}
 
       {open && (
         <div className="absolute left-0 top-full mt-2 w-[calc(100vw-2rem)] max-w-72 bg-white border border-blush rounded-xl shadow-lg p-4 z-50">

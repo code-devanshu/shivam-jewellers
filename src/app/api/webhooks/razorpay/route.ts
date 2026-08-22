@@ -17,8 +17,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
-  const event = JSON.parse(rawBody);
-  if (!HANDLED_EVENTS.has(event.event)) {
+  let event: { event?: string; payload?: { payment?: { entity?: { order_id?: string; id?: string } } } };
+  try {
+    event = JSON.parse(rawBody);
+  } catch (err) {
+    console.error("[razorpay-webhook] Invalid JSON body:", err);
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
+
+  if (!HANDLED_EVENTS.has(event.event ?? "")) {
     return NextResponse.json({ ok: true });
   }
 

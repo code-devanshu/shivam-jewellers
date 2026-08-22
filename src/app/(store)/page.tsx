@@ -95,17 +95,17 @@ export default async function HomePage() {
       />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <HeroSection categories={categories} banners={banners} />
+      <HeroSection banners={banners} />
 
       {/* ── Shop by Category ─────────────────────────────────────────────── */}
-      <section className="py-16 bg-cream">
+      <section className="py-10 sm:py-16 bg-cream">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-end justify-between mb-8">
+          <div className="flex items-end justify-between mb-5 sm:mb-8">
             <div>
               <p className="text-rose-gold text-xs font-semibold uppercase tracking-widest mb-1">
                 Browse
               </p>
-              <h2 className="text-3xl font-serif font-bold text-brown-dark">
+              <h2 className="text-2xl sm:text-3xl font-serif font-bold text-brown-dark">
                 Shop by Category
               </h2>
             </div>
@@ -127,10 +127,10 @@ export default async function HomePage() {
       </Suspense>
 
       {/* ── Trust Pillars ────────────────────────────────────────────────── */}
-      <section className="py-16 bg-blush/30 border-t border-blush">
+      <section className="py-10 sm:py-16 bg-blush/30 border-t border-blush">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
-            <div className="flex flex-col items-center gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 text-center">
+            <div className="flex flex-col items-center gap-3 sm:gap-4">
               <div className="w-14 h-14 bg-rose-gold/10 rounded-full flex items-center justify-center text-rose-gold">
                 <ShieldCheck size={26} />
               </div>
@@ -143,7 +143,7 @@ export default async function HomePage() {
               </p>
             </div>
 
-            <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col items-center gap-3 sm:gap-4">
               <div className="w-14 h-14 bg-rose-gold/10 rounded-full flex items-center justify-center text-rose-gold">
                 <Star size={26} />
               </div>
@@ -156,7 +156,7 @@ export default async function HomePage() {
               </p>
             </div>
 
-            <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col items-center gap-3 sm:gap-4">
               <div className="w-14 h-14 bg-rose-gold/10 rounded-full flex items-center justify-center text-rose-gold">
                 <Truck size={26} />
               </div>
@@ -185,14 +185,14 @@ async function FeaturedCollection({ customerId }: { customerId: string | null })
   const rateMap = Object.fromEntries(rates.map((r) => [r.metalId, r.ratePerGram]));
 
   return (
-    <section className="py-16">
+    <section className="py-10 sm:py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-end justify-between mb-8">
+        <div className="flex items-end justify-between mb-5 sm:mb-8">
           <div>
             <p className="text-rose-gold text-xs font-semibold uppercase tracking-widest mb-1">
               Handpicked
             </p>
-            <h2 className="text-3xl font-serif font-bold text-brown-dark">
+            <h2 className="text-2xl sm:text-3xl font-serif font-bold text-brown-dark">
               Featured Collection
             </h2>
           </div>
@@ -204,7 +204,7 @@ async function FeaturedCollection({ customerId }: { customerId: string | null })
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {featured.map((product) => (
             <ProductCard
               key={product.id}
@@ -221,20 +221,20 @@ async function FeaturedCollection({ customerId }: { customerId: string | null })
 
 function FeaturedCollectionSkeleton() {
   return (
-    <section className="py-16">
+    <section className="py-10 sm:py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-end justify-between mb-8">
+        <div className="flex items-end justify-between mb-5 sm:mb-8">
           <div>
             <p className="text-rose-gold text-xs font-semibold uppercase tracking-widest mb-1">
               Handpicked
             </p>
-            <h2 className="text-3xl font-serif font-bold text-brown-dark">
+            <h2 className="text-2xl sm:text-3xl font-serif font-bold text-brown-dark">
               Featured Collection
             </h2>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}

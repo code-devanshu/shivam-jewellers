@@ -34,7 +34,7 @@ function ProductPrice({
   const rateMap = use(ratePromise);
   const { totalPrice } = calculatePrice(product, rateMap[product.metalId] ?? 0);
   return (
-    <span className="text-base font-bold text-rose-gold-dark">
+    <span className="text-sm sm:text-base font-bold text-rose-gold-dark">
       {formatPrice(totalPrice)}
     </span>
   );
@@ -144,7 +144,7 @@ export default function ProductCard({ product, ratePromise, wishlistedIdsPromise
               alt={product.name}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-300"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               priority={priority}
             />
           ) : (
@@ -193,11 +193,11 @@ export default function ProductCard({ product, ratePromise, wishlistedIdsPromise
         </div>
 
         {/* Info */}
-        <div className="p-4">
-          <p className="text-[11px] font-medium text-rose-gold uppercase tracking-wider mb-1">
+        <div className="p-2.5 sm:p-4">
+          <p className="text-[10px] sm:text-[11px] font-medium text-rose-gold uppercase tracking-wider mb-1 line-clamp-1">
             {product.metal.name} · {product.purity}
           </p>
-          <h3 className="text-sm font-semibold text-brown-dark leading-snug line-clamp-1 mb-2">
+          <h3 className="text-xs sm:text-sm font-semibold text-brown-dark leading-snug line-clamp-1 mb-2">
             {product.name}
           </h3>
           <div className="flex items-center justify-between">

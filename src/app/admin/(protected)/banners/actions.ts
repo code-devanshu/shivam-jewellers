@@ -1,6 +1,8 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { verifyAdminSession } from "@/lib/admin-auth";
 import {
   storeAddBanner,
   storeUpdateBanner,
@@ -12,6 +14,12 @@ export type BannerFormState =
   | { status: "success"; message: string }
   | { status: "error"; message: string };
 
+async function requireAdmin(): Promise<boolean> {
+  const cookieStore = await cookies();
+  const session = cookieStore.get("admin_session")?.value;
+  return verifyAdminSession(session);
+}
+
 function revalidateAll() {
   revalidateTag("banners", "max");
   revalidatePath("/admin/banners");
@@ -22,6 +30,8 @@ export async function createBanner(
   _prev: BannerFormState,
   formData: FormData
 ): Promise<BannerFormState> {
+  if (!(await requireAdmin())) return { status: "error", message: "Unauthorized" };
+
   const imageUrl = (formData.get("imageUrl") as string)?.trim();
   const title = (formData.get("title") as string)?.trim() || null;
   const linkUrl = (formData.get("linkUrl") as string)?.trim() || null;
@@ -41,6 +51,8 @@ export async function updateBanner(
   _prev: BannerFormState,
   formData: FormData
 ): Promise<BannerFormState> {
+  if (!(await requireAdmin())) return { status: "error", message: "Unauthorized" };
+
   const imageUrl = (formData.get("imageUrl") as string)?.trim();
   const title = (formData.get("title") as string)?.trim() || null;
   const linkUrl = (formData.get("linkUrl") as string)?.trim() || null;
@@ -56,6 +68,7 @@ export async function updateBanner(
 }
 
 export async function deleteBanner(formData: FormData): Promise<void> {
+  if (!(await requireAdmin())) return;
   const id = formData.get("id") as string;
   if (!id) return;
   await storeDeleteBanner(id);
@@ -63,6 +76,7 @@ export async function deleteBanner(formData: FormData): Promise<void> {
 }
 
 export async function toggleBannerActive(id: string, isActive: boolean): Promise<void> {
+  if (!(await requireAdmin())) return;
   await storeUpdateBanner(id, { isActive });
   revalidateAll();
 }

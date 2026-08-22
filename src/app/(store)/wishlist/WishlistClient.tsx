@@ -86,7 +86,7 @@ function WishlistCard({
 export default function WishlistClient({ items, rates }: Props) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <h1 className="text-2xl font-serif font-bold text-brown-dark mb-6">
+      <h1 className="text-xl sm:text-2xl font-serif font-bold text-brown-dark mb-6">
         My Wishlist{" "}
         <span className="text-base font-normal text-brown/50">
           ({items.length} {items.length === 1 ? "item" : "items"})

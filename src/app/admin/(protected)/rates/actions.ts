@@ -1,6 +1,8 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { verifyAdminSession } from "@/lib/admin-auth";
 import { storeSetRateOverride, storeClearRateOverride } from "@/lib/admin-store";
 
 export type RateFormState =
@@ -8,10 +10,18 @@ export type RateFormState =
   | { status: "success"; message: string }
   | { status: "error"; message: string };
 
+async function requireAdmin(): Promise<boolean> {
+  const cookieStore = await cookies();
+  const session = cookieStore.get("admin_session")?.value;
+  return verifyAdminSession(session);
+}
+
 export async function overrideRates(
   _prev: RateFormState,
   formData: FormData
 ): Promise<RateFormState> {
+  if (!(await requireAdmin())) return { status: "error", message: "Unauthorized" };
+
   const goldStr = formData.get("gold") as string;
   const silverStr = formData.get("silver") as string;
 
@@ -33,6 +43,7 @@ export async function overrideRates(
 }
 
 export async function clearRateOverrides(): Promise<void> {
+  if (!(await requireAdmin())) return;
   await storeClearRateOverride("metal-gold");
   await storeClearRateOverride("metal-silver");
   revalidateTag("rates", "max");

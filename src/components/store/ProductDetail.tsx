@@ -108,7 +108,7 @@ function PriceCard({
   return (
     <div className="bg-cream border border-blush rounded-2xl p-5">
       <div className="flex items-center justify-between">
-        <span className="text-3xl font-bold text-rose-gold-dark">
+        <span className="text-2xl sm:text-3xl font-bold text-rose-gold-dark">
           {formatPrice(breakdown.totalPrice)}
         </span>
         <button
@@ -382,7 +382,7 @@ export default function ProductDetail({
           {/* Name + weight */}
           <div>
             <div className="flex items-start justify-between gap-3 mb-3">
-              <h1 className="text-3xl font-serif font-bold text-brown-dark leading-snug">
+              <h1 className="text-2xl sm:text-3xl font-serif font-bold text-brown-dark leading-snug">
                 {product.name}
               </h1>
               <Suspense fallback={<WishlistButtonSkeleton />}>

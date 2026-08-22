@@ -1,6 +1,14 @@
 "use server";
 
+import { cookies } from "next/headers";
+import { verifyAdminSession } from "@/lib/admin-auth";
 import { cloudinary } from "@/lib/cloudinary";
+
+async function requireAdmin(): Promise<boolean> {
+  const cookieStore = await cookies();
+  const session = cookieStore.get("admin_session")?.value;
+  return verifyAdminSession(session);
+}
 
 export type CloudinaryImage = {
   publicId: string;
@@ -15,6 +23,8 @@ export type ListImagesResult =
   | { error: string };
 
 export async function listProductImages(cursor?: string): Promise<ListImagesResult> {
+  if (!(await requireAdmin())) return { error: "Unauthorized" };
+
   try {
     const res = await cloudinary.api.resources({
       type: "upload",

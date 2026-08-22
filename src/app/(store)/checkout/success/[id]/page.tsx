@@ -57,7 +57,7 @@ export default async function OrderSuccessPage({
         <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5">
           <CheckCircle size={40} className="text-green-500" />
         </div>
-        <h1 className="text-3xl font-serif font-bold text-brown-dark mb-2">Order Confirmed!</h1>
+        <h1 className="text-2xl sm:text-3xl font-serif font-bold text-brown-dark mb-2">Order Confirmed!</h1>
         <p className="text-brown/60 text-sm">
           Thank you for your purchase. We&apos;ll keep you updated on your order status.
         </p>

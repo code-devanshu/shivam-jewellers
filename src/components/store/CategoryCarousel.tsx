@@ -57,15 +57,11 @@ export default function CategoryCarousel({ categories }: Props) {
       {/* ── Scrollable track ── */}
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory"
+        className="grid grid-rows-2 lg:grid-rows-1 grid-flow-col auto-cols-[22%] sm:auto-cols-[15%] lg:auto-cols-[11%] gap-3 sm:gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory no-scrollbar"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {categories.map((cat) => (
-          <div
-            key={cat.id}
-            data-card
-            className="flex-none snap-start w-[calc(50%-8px)] sm:w-[calc(33.333%-11px)] lg:w-[calc(20%-13px)]"
-          >
+          <div key={cat.id} data-card className="snap-start">
             <CategoryCard category={cat} />
           </div>
         ))}

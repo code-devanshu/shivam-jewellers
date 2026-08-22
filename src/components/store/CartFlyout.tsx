@@ -134,7 +134,7 @@ function AlsoPurchasedStrip({ productId, onAdd }: { productId: string; onAdd: ()
         Customers also purchased
       </p>
       <div
-        className="flex gap-3 overflow-x-auto"
+        className="flex gap-3 overflow-x-auto no-scrollbar"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {state.products.map((product) => (

@@ -265,7 +265,7 @@ export default function CartClient({ items, rates }: Props) {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-serif font-bold text-brown-dark">
+        <h1 className="text-xl sm:text-2xl font-serif font-bold text-brown-dark">
           Your Cart{" "}
           <span className="text-base font-normal text-brown/50">
             ({optimisticItems.length} {optimisticItems.length === 1 ? "item" : "items"})

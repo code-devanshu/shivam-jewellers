@@ -1,6 +1,8 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { verifyAdminSession } from "@/lib/admin-auth";
 import {
   storeAddCategory,
   storeUpdateCategory,
@@ -13,6 +15,12 @@ export type CategoryFormState =
   | { status: "idle" }
   | { status: "success"; message: string }
   | { status: "error"; message: string };
+
+async function requireAdmin(): Promise<boolean> {
+  const cookieStore = await cookies();
+  const session = cookieStore.get("admin_session")?.value;
+  return verifyAdminSession(session);
+}
 
 function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/, "");
@@ -29,6 +37,8 @@ export async function createCategory(
   _prev: CategoryFormState,
   formData: FormData
 ): Promise<CategoryFormState> {
+  if (!(await requireAdmin())) return { status: "error", message: "Unauthorized" };
+
   const name = (formData.get("name") as string)?.trim();
   const description = (formData.get("description") as string)?.trim() || null;
   const imageUrl = (formData.get("imageUrl") as string)?.trim() || null;
@@ -54,6 +64,8 @@ export async function updateCategory(
   _prev: CategoryFormState,
   formData: FormData
 ): Promise<CategoryFormState> {
+  if (!(await requireAdmin())) return { status: "error", message: "Unauthorized" };
+
   const name = (formData.get("name") as string)?.trim();
   const description = (formData.get("description") as string)?.trim() || null;
   const imageUrl = (formData.get("imageUrl") as string)?.trim() || null;
@@ -71,15 +83,22 @@ export async function updateCategory(
 }
 
 export async function deleteCategory(formData: FormData): Promise<void> {
+  if (!(await requireAdmin())) return;
   const id = formData.get("id") as string;
   if (!id) return;
-  await storeDeleteCategory(id);
+  try {
+    await storeDeleteCategory(id);
+  } catch (err) {
+    console.error("[categories] deleteCategory failed (likely still has products):", err);
+    return;
+  }
   revalidateAll();
 }
 
 export async function getCategoryProductImages(
   categoryId: string
 ): Promise<Array<{ url: string; productName: string }>> {
+  if (!(await requireAdmin())) return [];
   const images = await db.productImage.findMany({
     where: { product: { categoryId } },
     include: { product: { select: { name: true } } },

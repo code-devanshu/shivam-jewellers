@@ -23,3 +23,9 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/* scrollbar-width/-ms-overflow-style (set inline where used) only hide the
+   scrollbar in Firefox/old Edge — Chrome and Safari need this instead. */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

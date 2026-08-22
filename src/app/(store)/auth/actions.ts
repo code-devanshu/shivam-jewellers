@@ -1,13 +1,30 @@
 "use server";
 
 import { randomInt, timingSafeEqual } from "crypto";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { setCustomerSession, clearCustomerSession } from "@/lib/customer-auth";
 import { isValidIndianPhone, normalizePhone } from "@/lib/phone";
 import { sendPhoneOtp } from "@/lib/otp-dispatch";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const MAX_ATTEMPTS = 5;
+
+// Per-phone cooldown (below) stops one number being spammed, but not an
+// attacker fanning OTP sends out across many numbers to run up WhatsApp/SMS
+// costs or harass random people. Cap per source IP too.
+const OTP_IP_LIMIT = 10;
+const OTP_IP_WINDOW_MS = 60 * 60 * 1000;
+
+async function clientIp(): Promise<string> {
+  const headersList = await headers();
+  return (
+    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    headersList.get("x-real-ip") ??
+    "unknown"
+  );
+}
 
 function codesMatch(a: string, b: string): boolean {
   const bufA = Buffer.from(a);
@@ -43,6 +60,11 @@ export async function sendOtp(
     return { error: "Enter a valid 10-digit phone number." };
   }
   const phone = normalizePhone(rawPhone);
+
+  const ip = await clientIp();
+  if (!checkRateLimit(`otp-send:${ip}`, OTP_IP_LIMIT, OTP_IP_WINDOW_MS)) {
+    return { error: "Too many OTP requests from this network. Please try again later." };
+  }
 
   // 60-second cooldown to prevent abuse
   const recent = await db.customerOtp.findFirst({

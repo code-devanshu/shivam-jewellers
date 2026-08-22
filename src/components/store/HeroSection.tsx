@@ -4,14 +4,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
-import type { Banner, Category } from "@/lib/types";
+import type { Banner } from "@/lib/types";
 
 type Props = {
-  categories: Category[];
   banners: Banner[];
 };
 
-export default function HeroSection({ categories, banners }: Props) {
+export default function HeroSection({ banners }: Props) {
   const slides = banners;
   const [current, setCurrent] = useState(0);
   // Only the current + next slide are mounted as <Image>s (not all of them),
@@ -38,8 +37,8 @@ export default function HeroSection({ categories, banners }: Props) {
 
   return (
     <section
-      className="relative overflow-hidden flex items-center"
-      style={{ minHeight: "70vh", backgroundColor: "#1a0e0a" }}
+      className="relative overflow-hidden flex items-center min-h-[36vh] sm:min-h-[46vh] lg:min-h-[52vh]"
+      style={{ backgroundColor: "#1a0e0a" }}
     >
       {/* ── Background carousel ───────────────────────────────────── */}
       {slides.length > 0 && (
@@ -93,41 +92,41 @@ export default function HeroSection({ categories, banners }: Props) {
       )}
 
       {/* ── Content ───────────────────────────────────────────────── */}
-      <div className="relative w-full max-w-5xl mx-auto px-6 sm:px-8 py-14 lg:py-20 text-center">
+      <div className="relative w-full max-w-5xl mx-auto px-6 sm:px-8 py-6 sm:py-8 lg:py-10 text-center">
         {/* Badge */}
         <p
-          className="text-[11px] font-semibold uppercase mb-4"
+          className="text-[10px] sm:text-[11px] font-semibold uppercase mb-2 sm:mb-3"
           style={{ color: "rgba(255,255,255,0.55)", letterSpacing: "0.28em" }}
         >
           BIS Hallmark Certified · Est. 1995 · Deoria, UP
         </p>
 
         {/* Decorative rule */}
-        <div className="flex items-center justify-center gap-3 mb-5">
+        <div className="hidden sm:flex items-center justify-center gap-3 mb-3">
           <div
-            className="h-px w-14"
+            className="h-px w-10"
             style={{ backgroundColor: "rgba(200,150,100,0.35)" }}
           />
           <span style={{ color: "rgba(200,150,100,0.55)", fontSize: 12 }}>
             ✦
           </span>
           <div
-            className="h-px w-14"
+            className="h-px w-10"
             style={{ backgroundColor: "rgba(200,150,100,0.35)" }}
           />
         </div>
 
         {/* Store name */}
         <h1
-          className="font-serif font-bold leading-[1.05] tracking-tight mb-4"
-          style={{ fontSize: "clamp(2.8rem, 8vw, 5.5rem)", color: "#fff" }}
+          className="font-serif font-bold leading-[1.05] tracking-tight mb-2 sm:mb-3"
+          style={{ fontSize: "clamp(2.1rem, 7.5vw, 4.5rem)", color: "#fff" }}
         >
           Shivam Jewellers
         </h1>
 
         {/* Tagline */}
         <p
-          className="leading-relaxed mb-7 max-w-sm mx-auto text-base sm:text-lg"
+          className="leading-relaxed mb-3 sm:mb-4 max-w-sm mx-auto text-sm sm:text-base"
           style={{ color: "rgba(255,255,255,0.65)" }}
         >
           Fine gold &amp; silver jewellery, crafted with 30 years of tradition.
@@ -137,7 +136,7 @@ export default function HeroSection({ categories, banners }: Props) {
         {/* Primary CTA */}
         <Link
           href="/products"
-          className="inline-flex items-center gap-2 px-9 py-3.5 rounded-full font-semibold text-sm transition-all"
+          className="inline-flex items-center gap-2 px-7 sm:px-8 py-2.5 sm:py-3 rounded-full font-semibold text-sm transition-all"
           style={{
             backgroundColor: "var(--color-rose-gold, #c4956a)",
             color: "#fff",
@@ -155,53 +154,9 @@ export default function HeroSection({ categories, banners }: Props) {
           Browse Collection <ArrowRight size={15} />
         </Link>
 
-        {/* Category pills */}
-        {categories.length > 0 && (
-          <>
-            <div className="flex items-center justify-center gap-3 mt-8 mb-4">
-              <div
-                className="h-px w-12"
-                style={{ backgroundColor: "rgba(255,255,255,0.12)" }}
-              />
-              <span
-                className="text-[10px] font-semibold uppercase"
-                style={{
-                  color: "rgba(255,255,255,0.35)",
-                  letterSpacing: "0.2em",
-                }}
-              >
-                Shop by category
-              </span>
-              <div
-                className="h-px w-12"
-                style={{ backgroundColor: "rgba(255,255,255,0.12)" }}
-              />
-            </div>
-
-            <div
-              className="flex gap-2 overflow-x-auto justify-start sm:justify-center pb-1"
-              style={{ scrollbarWidth: "none" }}
-            >
-              {categories.map((cat) => (
-                <Link
-                  key={cat.id}
-                  href={`/products?category=${cat.slug}`}
-                  className="flex-none text-[12px] font-medium px-4 py-1.5 rounded-full transition-all whitespace-nowrap"
-                  style={{
-                    color: "rgba(255,255,255,0.70)",
-                    border: "1px solid rgba(255,255,255,0.20)",
-                  }}
-                >
-                  {cat.name}
-                </Link>
-              ))}
-            </div>
-          </>
-        )}
-
         {/* Slide indicator dots */}
         {slides.length > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-7">
+          <div className="flex items-center justify-center gap-2 mt-4 sm:mt-5">
             {slides.map((_, i) => (
               <button
                 key={i}

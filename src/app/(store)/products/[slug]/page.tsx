@@ -4,6 +4,7 @@ import { getProductBySlug, getCurrentRates, getAllProducts, getAlsoPurchased } f
 import { getCustomerSession } from "@/lib/customer-auth";
 import { getWishlistedProductIds } from "@/lib/customer-store";
 import { calculatePrice } from "@/lib/price";
+import { safeJsonLd } from "@/lib/json-ld";
 import ProductDetail from "@/components/store/ProductDetail";
 import type { Product } from "@/lib/types";
 
@@ -81,7 +82,7 @@ async function ProductJsonLd({
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(productJsonLd) }}
     />
   );
 }

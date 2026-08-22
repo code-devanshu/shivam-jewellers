@@ -107,7 +107,7 @@ export default async function ProductsPage({ searchParams }: Props) {
 
       {/* Page title */}
       <div className="mb-8">
-        <h1 className="text-3xl font-serif font-bold text-brown-dark">
+        <h1 className="text-2xl sm:text-3xl font-serif font-bold text-brown-dark">
           {params.q
             ? `Results for "${params.q}"`
             : activeCategory?.name ?? "All Jewellery"}

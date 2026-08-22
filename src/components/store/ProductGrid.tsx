@@ -56,7 +56,7 @@ export default function ProductGrid({
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-6">
         {products.map((product, idx) => (
           <ProductCard
             key={product.id}
@@ -80,7 +80,7 @@ function ProductCardSkeleton() {
   return (
     <div className="bg-white rounded-2xl overflow-hidden border border-blush animate-pulse">
       <div className="aspect-square bg-blush/40" />
-      <div className="p-4 space-y-2.5">
+      <div className="p-2.5 sm:p-4 space-y-2.5">
         <div className="h-2.5 w-1/3 bg-blush/60 rounded-full" />
         <div className="h-3.5 w-4/5 bg-blush/60 rounded-full" />
         <div className="flex items-center justify-between pt-1">

@@ -1,5 +1,7 @@
 "use server";
 
+import { cookies } from "next/headers";
+import { verifyAdminSession } from "@/lib/admin-auth";
 import { cloudinary } from "@/lib/cloudinary";
 
 type UploadResult =
@@ -9,7 +11,15 @@ type UploadResult =
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 
+async function requireAdmin(): Promise<boolean> {
+  const cookieStore = await cookies();
+  const session = cookieStore.get("admin_session")?.value;
+  return verifyAdminSession(session);
+}
+
 export async function uploadProductImage(formData: FormData): Promise<UploadResult> {
+  if (!(await requireAdmin())) return { error: "Unauthorized" };
+
   const file = formData.get("file");
   if (!file || typeof file === "string") return { error: "No file provided." };
 

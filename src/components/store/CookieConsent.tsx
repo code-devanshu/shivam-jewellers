@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import Script from "next/script";
 import Link from "next/link";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import { useIsClient } from "@/lib/useIsClient";
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "1083951127307391";
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_ID;
@@ -34,6 +35,9 @@ function decide(value: "granted" | "denied") {
 
 export default function CookieConsent() {
   const consent = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  // Defer showing/hiding the banner until after hydration settles on the real
+  // localStorage value, so a returning visitor never sees it flash on then off.
+  const mounted = useIsClient();
 
   return (
     <>
@@ -67,7 +71,7 @@ export default function CookieConsent() {
         </>
       )}
 
-      {consent === null && (
+      {mounted && consent === null && (
         <div className="fixed bottom-0 inset-x-0 z-50 p-4 sm:p-6">
           <div className="max-w-3xl mx-auto bg-white border border-gray-200 rounded-2xl shadow-lg p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             <p className="text-sm text-gray-500 flex-1">

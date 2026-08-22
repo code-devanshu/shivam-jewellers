@@ -39,8 +39,8 @@ export default function CategoryCard({ category }: Props) {
   }, [images.length]);
 
   return (
-    <Link href={`/products?category=${category.slug}`} className="group block">
-      <div className="relative aspect-square rounded-2xl overflow-hidden border border-rose-gold-light/30 shadow-sm hover:shadow-md transition-all duration-200">
+    <Link href={`/products?category=${category.slug}`} className="group flex flex-col items-center gap-1.5 sm:gap-2">
+      <div className="relative aspect-square w-full rounded-2xl overflow-hidden border border-rose-gold-light/30 shadow-sm group-hover:shadow-md transition-all duration-200">
         {images.length > 0 ? (
           images.map((url, i) =>
             loadedIdx.has(i) ? (
@@ -54,7 +54,7 @@ export default function CategoryCard({ category }: Props) {
                     ? "opacity-100 scale-100 group-hover:scale-105"
                     : "opacity-0 scale-100"
                 }`}
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                sizes="(max-width: 640px) 25vw, (max-width: 1024px) 16vw, 11vw"
               />
             ) : null,
           )
@@ -63,25 +63,11 @@ export default function CategoryCard({ category }: Props) {
             ✦
           </div>
         )}
-
-        <div className="absolute inset-0 bg-linear-to-t from-brown-dark/70 via-transparent to-transparent" />
-
-        <div className="absolute bottom-0 left-0 right-0 p-3">
-          <p className="text-sm font-semibold text-white">{category.name}</p>
-          {images.length > 1 && (
-            <div className="flex gap-1 mt-1.5">
-              {images.map((_, i) => (
-                <div
-                  key={i}
-                  className={`h-0.5 rounded-full transition-all duration-500 ${
-                    i === idx ? "bg-white w-4" : "bg-white/40 w-1.5"
-                  }`}
-                />
-              ))}
-            </div>
-          )}
-        </div>
       </div>
+
+      <p className="text-[11px] sm:text-xs font-medium text-brown-dark text-center line-clamp-1">
+        {category.name}
+      </p>
     </Link>
   );
 }

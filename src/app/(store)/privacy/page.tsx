@@ -20,7 +20,7 @@ export default function PrivacyPage() {
         <p className="text-rose-gold text-xs font-semibold uppercase tracking-widest mb-2">
           Legal
         </p>
-        <h1 className="text-4xl font-serif font-bold text-brown-dark mb-3">
+        <h1 className="text-3xl sm:text-4xl font-serif font-bold text-brown-dark mb-3">
           Privacy Policy
         </h1>
         <p className="text-sm text-brown/50">Last updated: January 2025</p>

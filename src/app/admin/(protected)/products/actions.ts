@@ -1,6 +1,8 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { verifyAdminSession } from "@/lib/admin-auth";
 import {
   storeAddProduct,
   storeUpdateProduct,
@@ -9,6 +11,12 @@ import {
 } from "@/lib/admin-store";
 import { mockMetals } from "@/lib/mock/data";
 import type { MakingChargeType } from "@/lib/types";
+
+async function requireAdmin(): Promise<boolean> {
+  const cookieStore = await cookies();
+  const session = cookieStore.get("admin_session")?.value;
+  return verifyAdminSession(session);
+}
 
 function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/, "");
@@ -23,6 +31,8 @@ export async function createProduct(
   _prev: ProductFormState,
   formData: FormData
 ): Promise<ProductFormState> {
+  if (!(await requireAdmin())) return { status: "error", message: "Unauthorized" };
+
   const name = (formData.get("name") as string)?.trim();
   const slug = (formData.get("slug") as string)?.trim() || slugify(name);
   const categoryId = formData.get("categoryId") as string;
@@ -105,6 +115,8 @@ export async function updateProduct(
   _prev: ProductFormState,
   formData: FormData
 ): Promise<ProductFormState> {
+  if (!(await requireAdmin())) return { status: "error", message: "Unauthorized" };
+
   const name = (formData.get("name") as string)?.trim();
   const slug = (formData.get("slug") as string)?.trim() || slugify(name);
   const categoryId = formData.get("categoryId") as string;
@@ -168,6 +180,7 @@ export async function updateProduct(
 }
 
 export async function deleteProduct(formData: FormData): Promise<void> {
+  if (!(await requireAdmin())) return;
   const id = formData.get("id") as string;
   if (!id) return;
   await storeDeleteProduct(id);

@@ -59,7 +59,10 @@ export default function ProductImageGallery({ images, productName }: Props) {
       <div className="flex flex-col-reverse lg:flex-row gap-3">
         {/* Thumbnail strip — vertical on desktop */}
         {sorted.length > 1 && (
-          <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible lg:overflow-y-auto lg:max-h-[520px] pb-1 lg:pb-0 lg:w-18 shrink-0">
+          <div
+            className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible lg:overflow-y-auto lg:max-h-[520px] pb-1 lg:pb-0 lg:w-18 shrink-0 no-scrollbar"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          >
             {sorted.map((img, idx) => (
               <button
                 key={img.id}
@@ -219,7 +222,10 @@ export default function ProductImageGallery({ images, productName }: Props) {
 
           {/* Thumbnail strip in lightbox */}
           {sorted.length > 1 && (
-            <div className="absolute bottom-6 flex gap-2 overflow-x-auto max-w-screen px-4">
+            <div
+              className="absolute bottom-6 flex gap-2 overflow-x-auto max-w-screen px-4 no-scrollbar"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            >
               {sorted.map((img, idx) => (
                 <button
                   key={img.id}

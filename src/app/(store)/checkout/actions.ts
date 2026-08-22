@@ -250,11 +250,18 @@ async function issueInvoice(opts: {
     notes: opts.notes,
   };
 
-  const pdfBuffer = await generateInvoicePDF(invoiceData);
-
-  await db.invoice.create({
-    data: { orderId: opts.orderId, invoiceNumber: opts.orderNumber },
-  });
+  let pdfBuffer: Buffer;
+  try {
+    pdfBuffer = await generateInvoicePDF(invoiceData);
+    await db.invoice.create({
+      data: { orderId: opts.orderId, invoiceNumber: opts.orderNumber },
+    });
+  } catch (err) {
+    // The order and payment have already been committed — a PDF/DB hiccup here
+    // must not surface as a failed checkout. It can be regenerated later.
+    console.error("[invoice] Generation failed:", err);
+    return;
+  }
 
   if (opts.customer.email) {
     try {
@@ -493,46 +500,60 @@ export async function placeOrderCOD(input: CheckoutInput): Promise<void> {
   const silverRate = rates.find((r) => r.metalId === "metal-silver")?.ratePerGram;
   const addressId = await saveAddress(customerId, input);
 
-  const order = await db.order.create({
-    data: {
-      orderNumber,
-      customerId,
-      addressId,
-      deliveryType: input.deliveryType,
-      status: "CONFIRMED",
-      paymentStatus: "PENDING",
-      paymentMethod: "COD",
-      subtotal: totals.subtotal,
-      gstAmount: totals.gstAmount,
-      shippingCharge,
-      estimatedDeliveryDate,
-      totalAmount: finalTotalAmount,
-      notes: input.notes,
-      goldRateAtOrder: goldRate,
-      silverRateAtOrder: silverRate,
-      items: { create: items },
-      statusHistory: {
-        create: { status: "CONFIRMED", note: "Order placed — Cash on Delivery" },
+  const order = await db.$transaction(async (tx) => {
+    const created = await tx.order.create({
+      data: {
+        orderNumber,
+        customerId,
+        addressId,
+        deliveryType: input.deliveryType,
+        status: "CONFIRMED",
+        paymentStatus: "PENDING",
+        paymentMethod: "COD",
+        subtotal: totals.subtotal,
+        gstAmount: totals.gstAmount,
+        shippingCharge,
+        estimatedDeliveryDate,
+        totalAmount: finalTotalAmount,
+        notes: input.notes,
+        goldRateAtOrder: goldRate,
+        silverRateAtOrder: silverRate,
+        items: { create: items },
+        statusHistory: {
+          create: { status: "CONFIRMED", note: "Order placed — Cash on Delivery" },
+        },
       },
-    },
+    });
+
+    // No payment has been captured yet for COD, so it's safe to abort the whole
+    // order (rolling back its creation) if stock ran out from under this checkout.
+    for (const item of items) {
+      const result = await tx.product.updateMany({
+        where: { id: item.productId, stockQty: { gte: item.quantity } },
+        data: { stockQty: { decrement: item.quantity } },
+      });
+      if (result.count === 0) {
+        throw new Error(
+          `Sorry, "${item.productName}" just went out of stock. Please update your cart and try again.`
+        );
+      }
+      const product = await tx.product.findUnique({
+        where: { id: item.productId },
+        select: { stockQty: true },
+      });
+      if (product && product.stockQty <= 0) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stockQty: 0, isAvailable: false },
+        });
+      }
+    }
+
+    return created;
   });
 
   await decrementCartAfterOrder(customerId, items);
   revalidatePath("/cart");
-
-  for (const item of items) {
-    const updated = await db.product.update({
-      where: { id: item.productId },
-      data: { stockQty: { decrement: item.quantity } },
-      select: { stockQty: true },
-    });
-    if (updated.stockQty <= 0) {
-      await db.product.update({
-        where: { id: item.productId },
-        data: { stockQty: 0, isAvailable: false },
-      });
-    }
-  }
 
   await issueInvoice({
     orderId: order.id,
@@ -653,40 +674,54 @@ export async function confirmRazorpayPayment(params: {
   if (!order) return "not_found";
   if (order.status !== "PENDING_PAYMENT") return "already_confirmed";
 
-  await db.order.update({
-    where: { id: order.id },
-    data: {
-      status: "CONFIRMED",
-      paymentStatus: "PAID",
-      paymentId: params.paymentId,
-    },
-  });
+  await db.$transaction(async (tx) => {
+    await tx.order.update({
+      where: { id: order.id },
+      data: {
+        status: "CONFIRMED",
+        paymentStatus: "PAID",
+        paymentId: params.paymentId,
+      },
+    });
 
-  await db.orderStatusHistory.create({
-    data: {
-      orderId: order.id,
-      status: "CONFIRMED",
-      note: `Payment received (${params.paymentId})`,
-    },
+    await tx.orderStatusHistory.create({
+      data: {
+        orderId: order.id,
+        status: "CONFIRMED",
+        note: `Payment received (${params.paymentId})`,
+      },
+    });
+
+    // Payment is already captured at this point, so unlike COD we can't abort the
+    // order if stock ran out — clamp at zero instead of letting stockQty go negative.
+    for (const item of order.items) {
+      if (!item.productId) continue;
+      const result = await tx.product.updateMany({
+        where: { id: item.productId, stockQty: { gte: item.quantity } },
+        data: { stockQty: { decrement: item.quantity } },
+      });
+      if (result.count === 0) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stockQty: 0, isAvailable: false },
+        });
+        continue;
+      }
+      const product = await tx.product.findUnique({
+        where: { id: item.productId },
+        select: { stockQty: true },
+      });
+      if (product && product.stockQty <= 0) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stockQty: 0, isAvailable: false },
+        });
+      }
+    }
   });
 
   await decrementCartAfterOrder(order.customerId, order.items);
   revalidatePath("/cart");
-
-  for (const item of order.items) {
-    if (!item.productId) continue;
-    const updated = await db.product.update({
-      where: { id: item.productId },
-      data: { stockQty: { decrement: item.quantity } },
-      select: { stockQty: true },
-    });
-    if (updated.stockQty <= 0) {
-      await db.product.update({
-        where: { id: item.productId },
-        data: { stockQty: 0, isAvailable: false },
-      });
-    }
-  }
 
   const deliveryAddress = order.address
     ? {

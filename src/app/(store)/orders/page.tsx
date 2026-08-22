@@ -34,7 +34,7 @@ export default async function OrdersPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
-      <h1 className="text-2xl font-serif font-bold text-brown-dark mb-6">My Orders</h1>
+      <h1 className="text-xl sm:text-2xl font-serif font-bold text-brown-dark mb-6">My Orders</h1>
 
       {orders.length === 0 ? (
         <div className="text-center py-20">

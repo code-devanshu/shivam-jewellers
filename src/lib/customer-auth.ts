@@ -2,16 +2,18 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-const SECRET = process.env.CUSTOMER_SESSION_SECRET ?? "fallback-secret";
+const SECRET = process.env.CUSTOMER_SESSION_SECRET;
 const COOKIE = "cust_session";
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 function sign(id: string): string {
+  if (!SECRET) throw new Error("CUSTOMER_SESSION_SECRET is not configured on the server.");
   const mac = createHmac("sha256", SECRET).update(id).digest("hex");
   return `${id}:${mac}`;
 }
 
 function verifyAndExtract(value: string): string | null {
+  if (!SECRET) return null;
   const sep = value.lastIndexOf(":");
   if (sep === -1) return null;
   const id = value.slice(0, sep);

@@ -315,7 +315,7 @@ export default function CheckoutClient({
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <h1 className="text-2xl font-serif font-bold text-brown-dark mb-8">Checkout</h1>
+      <h1 className="text-xl sm:text-2xl font-serif font-bold text-brown-dark mb-8">Checkout</h1>
 
       {/* Verifying overlay */}
       {isVerifying && (

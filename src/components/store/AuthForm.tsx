@@ -100,7 +100,7 @@ export default function AuthForm({ next }: { next: string }) {
       <div className="bg-white border border-blush rounded-3xl shadow-xl p-7 space-y-5">
         <div className="text-center">
           <span className="text-3xl text-rose-gold">✦</span>
-          <h1 className="mt-3 text-2xl font-serif font-bold text-brown-dark">
+          <h1 className="mt-3 text-xl sm:text-2xl font-serif font-bold text-brown-dark">
             {step === "phone" ? "Welcome to Shivam Jewellers" : "Verify your phone"}
           </h1>
           <p className="mt-1 text-sm text-brown/60">
