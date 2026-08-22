@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { getProductBySlug, getCurrentRates, getAllProducts } from "@/lib/data";
+import { getProductBySlug, getCurrentRates, getAllProducts, getAlsoPurchased } from "@/lib/data";
 import { getCustomerSession } from "@/lib/customer-auth";
 import { getWishlistedProductIds } from "@/lib/customer-store";
 import { calculatePrice } from "@/lib/price";
@@ -100,12 +100,18 @@ export default async function ProductPage({ params }: Props) {
 
   if (!product) notFound();
 
-  const ratePromise = getCurrentRates().then(
+  const ratesPromise = getCurrentRates();
+  const ratePromise = ratesPromise.then(
     (rates) => rates.find((r) => r.metalId === product.metalId)?.ratePerGram ?? 0
   );
-  const wishlistPromise = customerId
-    ? getWishlistedProductIds(customerId).then((ids) => ids.includes(product.id))
-    : Promise.resolve(false);
+  const rateMapPromise = ratesPromise.then((rates) =>
+    Object.fromEntries(rates.map((r) => [r.metalId, r.ratePerGram]))
+  );
+  const wishlistedIdsPromise = customerId
+    ? getWishlistedProductIds(customerId)
+    : Promise.resolve([]);
+  const wishlistPromise = wishlistedIdsPromise.then((ids) => ids.includes(product.id));
+  const alsoPurchasedPromise = getAlsoPurchased(product.id);
 
   return (
     <>
@@ -117,6 +123,9 @@ export default async function ProductPage({ params }: Props) {
         ratePromise={ratePromise}
         customerId={customerId}
         wishlistPromise={wishlistPromise}
+        alsoPurchasedPromise={alsoPurchasedPromise}
+        alsoPurchasedRatePromise={rateMapPromise}
+        alsoPurchasedWishlistedIdsPromise={wishlistedIdsPromise}
       />
     </>
   );

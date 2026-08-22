@@ -7,6 +7,7 @@ import {
   upsertCartItem,
   deleteCartItem,
   setCartItemQty,
+  clearCart,
 } from "@/lib/customer-store";
 
 export async function addToCart(
@@ -44,5 +45,12 @@ export async function updateCartQty(itemId: string, qty: number): Promise<void> 
   const customerId = await getCustomerSession();
   if (!customerId) return;
   await setCartItemQty(customerId, itemId, qty);
+  revalidatePath("/cart");
+}
+
+export async function clearCartAction(): Promise<void> {
+  const customerId = await getCustomerSession();
+  if (!customerId) return;
+  await clearCart(customerId);
   revalidatePath("/cart");
 }

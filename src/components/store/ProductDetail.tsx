@@ -12,6 +12,8 @@ import {
   Zap,
 } from "lucide-react";
 import ProductImageGallery from "@/components/store/ProductImageGallery";
+import DeliveryEstimate from "@/components/store/DeliveryEstimate";
+import AlsoPurchasedCarousel from "@/components/store/AlsoPurchasedCarousel";
 import type { Product, ProductVariant } from "@/lib/types";
 import { calculatePrice, formatPrice } from "@/lib/price";
 import { toast } from "sonner";
@@ -27,7 +29,55 @@ type Props = {
   ratePromise: Promise<number>;
   customerId: string | null;
   wishlistPromise: Promise<boolean>;
+  alsoPurchasedPromise: Promise<Product[]>;
+  alsoPurchasedRatePromise: Promise<Record<string, number>>;
+  alsoPurchasedWishlistedIdsPromise: Promise<string[]>;
 };
+
+function AlsoPurchasedSkeleton() {
+  return (
+    <div className="mt-14">
+      <div className="h-6 w-64 bg-blush/40 rounded-lg animate-pulse mb-5" />
+      <div className="flex gap-4 overflow-x-hidden">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex-none w-[calc(50%-8px)] sm:w-[calc(33.333%-11px)] lg:w-[calc(25%-12px)] xl:w-[calc(20%-13px)]"
+          >
+            <div className="aspect-square bg-blush/40 rounded-2xl animate-pulse" />
+            <div className="h-3 w-2/3 bg-blush/40 rounded mt-3 animate-pulse" />
+            <div className="h-3 w-1/3 bg-blush/40 rounded mt-2 animate-pulse" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AlsoPurchasedSection({
+  alsoPurchasedPromise,
+  alsoPurchasedRatePromise,
+  alsoPurchasedWishlistedIdsPromise,
+}: {
+  alsoPurchasedPromise: Promise<Product[]>;
+  alsoPurchasedRatePromise: Promise<Record<string, number>>;
+  alsoPurchasedWishlistedIdsPromise: Promise<string[]>;
+}) {
+  const products = use(alsoPurchasedPromise);
+  if (products.length === 0) return null;
+  return (
+    <div className="mt-14">
+      <h2 className="text-xl font-serif font-bold text-brown-dark mb-5">
+        Customers also purchased
+      </h2>
+      <AlsoPurchasedCarousel
+        products={products}
+        ratePromise={alsoPurchasedRatePromise}
+        wishlistedIdsPromise={alsoPurchasedWishlistedIdsPromise}
+      />
+    </div>
+  );
+}
 
 function PriceCardSkeleton() {
   return (
@@ -184,6 +234,9 @@ export default function ProductDetail({
   ratePromise,
   customerId,
   wishlistPromise,
+  alsoPurchasedPromise,
+  alsoPurchasedRatePromise,
+  alsoPurchasedWishlistedIdsPromise,
 }: Props) {
   const router = useRouter();
   const { openAuthModal } = useAuthModal();
@@ -229,6 +282,7 @@ export default function ProductDetail({
         const ratePerGram = await ratePromise;
         const breakdown = calculatePrice(product, ratePerGram, additionalPrice);
         showFlyout({
+          productId: product.id,
           name: product.name,
           imageUrl: primaryImage?.url ?? null,
           price: breakdown.totalPrice,
@@ -446,6 +500,9 @@ export default function ProductDetail({
             </div>
           </div>
 
+          {/* Delivery estimate */}
+          <DeliveryEstimate />
+
           {/* Description */}
           {product.description && (
             <div className="border-t border-blush pt-5">
@@ -472,6 +529,15 @@ export default function ProductDetail({
           </div>
         </div>
       </div>
+
+      {/* Customers also purchased */}
+      <Suspense fallback={<AlsoPurchasedSkeleton />}>
+        <AlsoPurchasedSection
+          alsoPurchasedPromise={alsoPurchasedPromise}
+          alsoPurchasedRatePromise={alsoPurchasedRatePromise}
+          alsoPurchasedWishlistedIdsPromise={alsoPurchasedWishlistedIdsPromise}
+        />
+      </Suspense>
     </div>
   );
 }

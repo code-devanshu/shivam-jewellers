@@ -425,6 +425,35 @@ export async function checkPincodeAction(
   };
 }
 
+// Guest-safe delivery estimate for the product page — unlike checkPincodeAction,
+// this has no cart/customer context (no requireCustomer, no shipping charge), it
+// just answers "is this pincode serviceable and by when" for anonymous browsing.
+export type PdpDeliveryEstimate = {
+  serviceable: boolean;
+  message?: string;
+  tatDays?: number;
+  expectedDeliveryDate?: string;
+};
+
+export async function getPdpDeliveryEstimateAction(pincode: string): Promise<PdpDeliveryEstimate> {
+  if (!/^\d{6}$/.test(pincode)) {
+    return { serviceable: false, message: "Enter a valid 6-digit pincode." };
+  }
+
+  const serviceable = await isPincodeServiceable(pincode);
+  if (!serviceable) {
+    return { serviceable: false, message: "Sorry, we currently don't deliver to this pincode." };
+  }
+
+  try {
+    const tat = await getExpectedDelivery({ destinationPincode: pincode, pickupDate: nextPickupDate() });
+    return { serviceable: true, tatDays: tat.tatDays, expectedDeliveryDate: tat.expectedDeliveryDate };
+  } catch (err) {
+    console.error("[delhivery] PDP TAT lookup failed:", err);
+    return { serviceable: true };
+  }
+}
+
 // ─── Action: COD ──────────────────────────────────────────────────────────────
 
 export async function placeOrderCOD(input: CheckoutInput): Promise<void> {

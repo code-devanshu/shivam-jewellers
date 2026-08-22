@@ -116,6 +116,7 @@ export default function ProductCard({ product, ratePromise, wishlistedIdsPromise
         const rateMap = await ratePromise;
         const { totalPrice } = calculatePrice(product, rateMap[product.metalId] ?? 0);
         showFlyout({
+          productId: product.id,
           name: product.name,
           imageUrl: primary?.url ?? null,
           price: totalPrice,

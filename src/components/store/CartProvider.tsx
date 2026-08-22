@@ -35,7 +35,7 @@ export default function CartProvider({
   return (
     <CartContext.Provider value={{ count, setCount, increment, showFlyout }}>
       {children}
-      <CartFlyout item={flyoutItem} onClose={closeFlyout} />
+      <CartFlyout item={flyoutItem} onClose={closeFlyout} onQuickAdd={() => increment(1)} />
     </CartContext.Provider>
   );
 }

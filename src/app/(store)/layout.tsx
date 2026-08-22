@@ -5,6 +5,7 @@ import RateBanner from "@/components/store/RateBanner";
 import AuthModalProvider from "@/components/store/AuthModalProvider";
 import CartProvider from "@/components/store/CartProvider";
 import CookieConsent from "@/components/store/CookieConsent";
+import DeliveryLocationPrompt from "@/components/store/DeliveryLocationPrompt";
 import { Toaster } from "sonner";
 import { getCurrentRates, getCategories, getFeaturedProducts } from "@/lib/data";
 import { getCustomerSession } from "@/lib/customer-auth";
@@ -26,6 +27,7 @@ export default async function StoreLayout({
     <CartProvider initialCount={0}>
       <AuthModalProvider isLoggedIn={!!customerId}>
         <RateBanner rates={rates} />
+        <DeliveryLocationPrompt />
         <Suspense
           fallback={
             <Navbar

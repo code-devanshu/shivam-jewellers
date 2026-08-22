@@ -70,6 +70,12 @@ export async function deleteCartItem(customerId: string, itemId: string): Promis
   await db.cartItem.deleteMany({ where: { id: itemId, cartId: cart.id } });
 }
 
+export async function clearCart(customerId: string): Promise<void> {
+  const cart = await db.cart.findUnique({ where: { customerId } });
+  if (!cart) return;
+  await db.cartItem.deleteMany({ where: { cartId: cart.id } });
+}
+
 // ── Wishlist ──────────────────────────────────────────────────────────────────
 
 export async function getWishlistItemCount(customerId: string): Promise<number> {

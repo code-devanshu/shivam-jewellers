@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { startTransition, useOptimistic, useTransition } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Product, ProductVariant } from "@/lib/types";
 import { calculatePrice, formatPrice } from "@/lib/price";
-import { removeFromCart, restoreCartItem, updateCartQty } from "./actions";
+import { clearCartAction, removeFromCart, restoreCartItem, updateCartQty } from "./actions";
+import EmptyCart from "./EmptyCart";
 
 type CartItem = {
   id: string;
@@ -128,15 +129,65 @@ function CartRow({
   );
 }
 
+type CartAction = { type: "remove"; id: string } | { type: "clear" };
+
 export default function CartClient({ items, rates }: Props) {
-  const [optimisticItems, removeOptimisticItem] = useOptimistic(
+  const [optimisticItems, dispatchOptimistic] = useOptimistic(
     items,
-    (state, removedId: string) => state.filter((i) => i.id !== removedId)
+    (state, action: CartAction) =>
+      action.type === "clear" ? [] : state.filter((i) => i.id !== action.id)
   );
+  const [isClearing, startClearTransition] = useTransition();
+
+  const handleClearCart = () => {
+    if (optimisticItems.length === 0) return;
+    if (!window.confirm("Remove all items from your cart?")) return;
+
+    const clearedItems = optimisticItems;
+
+    startClearTransition(async () => {
+      dispatchOptimistic({ type: "clear" });
+      await clearCartAction();
+    });
+
+    toast("Cart cleared", {
+      duration: 5000,
+      style: {
+        background: "#fff",
+        border: "1px solid #ffe4e4",
+        color: "#2c1810",
+      },
+      classNames: {
+        actionButton: "!bg-rose-gold !text-white hover:!bg-rose-gold-dark",
+      },
+      action: {
+        label: "Undo",
+        onClick: () => {
+          toast.promise(
+            Promise.all(
+              clearedItems.map((item) =>
+                restoreCartItem(item.product.id, item.variant?.id ?? null, item.quantity)
+              )
+            ),
+            {
+              loading: "Restoring...",
+              success: "Cart restored",
+              error: "Couldn't restore cart",
+              style: {
+                background: "#fff",
+                border: "1px solid #ffe4e4",
+                color: "#2c1810",
+              },
+            }
+          );
+        },
+      },
+    });
+  };
 
   const handleRemove = (item: CartItem) => {
     startTransition(async () => {
-      removeOptimisticItem(item.id);
+      dispatchOptimistic({ type: "remove", id: item.id });
       await removeFromCart(item.id);
     });
 
@@ -195,14 +246,41 @@ export default function CartClient({ items, rates }: Props) {
 
   const total = subtotal + gst;
 
+  if (optimisticItems.length === 0) {
+    return (
+      <>
+        <EmptyCart />
+        {isClearing && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="bg-white rounded-2xl p-8 flex flex-col items-center gap-4 shadow-xl">
+              <Loader2 className="animate-spin text-rose-gold" size={36} />
+              <p className="text-brown-dark font-semibold">Clearing your cart…</p>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <h1 className="text-2xl font-serif font-bold text-brown-dark mb-6">
-        Your Cart{" "}
-        <span className="text-base font-normal text-brown/50">
-          ({optimisticItems.length} {optimisticItems.length === 1 ? "item" : "items"})
-        </span>
-      </h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-serif font-bold text-brown-dark">
+          Your Cart{" "}
+          <span className="text-base font-normal text-brown/50">
+            ({optimisticItems.length} {optimisticItems.length === 1 ? "item" : "items"})
+          </span>
+        </h1>
+        {optimisticItems.length > 0 && (
+          <button
+            onClick={handleClearCart}
+            className="flex items-center gap-1.5 text-xs font-medium text-brown/60 hover:text-red-500 border border-blush hover:border-red-200 rounded-full px-3 py-1.5 transition-colors"
+          >
+            <Trash2 size={13} />
+            Clear cart
+          </button>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Items */}
@@ -230,7 +308,7 @@ export default function CartClient({ items, rates }: Props) {
             </div>
           </div>
           <p className="text-xs text-brown/40 leading-relaxed">
-            Prices are calculated at today's live metal rate and may vary slightly at checkout.
+            Prices are calculated at today&apos;s live metal rate and may vary slightly at checkout.
           </p>
           <Link
             href="/checkout"
@@ -240,6 +318,15 @@ export default function CartClient({ items, rates }: Props) {
           </Link>
         </div>
       </div>
+
+      {isClearing && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 flex flex-col items-center gap-4 shadow-xl">
+            <Loader2 className="animate-spin text-rose-gold" size={36} />
+            <p className="text-brown-dark font-semibold">Clearing your cart…</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

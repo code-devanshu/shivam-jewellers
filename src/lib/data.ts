@@ -10,6 +10,7 @@ import {
   storeGetProductBySlug,
   storeGetFeaturedProducts,
   storeGetProductsPage,
+  storeGetAlsoPurchased,
 } from "./admin-store";
 
 // ── Cross-request persistent caches ─────────────────────────────────────────
@@ -59,6 +60,15 @@ const _cachedFeaturedProducts = unstable_cache(
   },
 );
 export const getFeaturedProducts = cache(_cachedFeaturedProducts);
+
+// Derived from order history, which nothing else here revalidates on write —
+// time-boxed like the rates cache so it doesn't go stale indefinitely.
+const _cachedAlsoPurchased = unstable_cache(
+  storeGetAlsoPurchased,
+  ["also-purchased"],
+  { tags: ["products"], revalidate: 3600 },
+);
+export const getAlsoPurchased = cache(_cachedAlsoPurchased);
 
 // Rate overrides/live rates hit the DB (up to 4 round-trips) on every call.
 // Cache cross-request for 60s; admin rate changes call revalidateTag("rates").

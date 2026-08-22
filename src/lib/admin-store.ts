@@ -21,6 +21,65 @@ export async function storeGetFeaturedProducts(): Promise<Product[]> {
   return rows.map(mapProduct);
 }
 
+// Products that showed up in the same past orders as `productId`, ranked by
+// co-purchase frequency. Backfilled with recent same-category products when
+// order history is too thin to fill `limit`.
+export async function storeGetAlsoPurchased(productId: string, limit = 10): Promise<Product[]> {
+  const ordersWithProduct = await db.orderItem.findMany({
+    where: { productId, order: { status: { not: "CANCELLED" } } },
+    select: { orderId: true },
+    distinct: ["orderId"],
+  });
+  const orderIds = ordersWithProduct.map((o) => o.orderId);
+
+  const grouped = orderIds.length
+    ? await db.orderItem.groupBy({
+        by: ["productId"],
+        where: { orderId: { in: orderIds } },
+        _count: { productId: true },
+        orderBy: { _count: { productId: "desc" } },
+        take: limit + 1, // +1 to absorb the source product itself, filtered out below
+      })
+    : [];
+
+  let productIds = grouped
+    .filter((g) => g.productId && g.productId !== productId)
+    .map((g) => g.productId as string)
+    .slice(0, limit);
+
+  if (productIds.length < limit) {
+    const current = await db.product.findUnique({
+      where: { id: productId },
+      select: { categoryId: true },
+    });
+    if (current) {
+      const fallback = await db.product.findMany({
+        where: {
+          categoryId: current.categoryId,
+          id: { notIn: [productId, ...productIds] },
+          isAvailable: true,
+        },
+        select: { id: true },
+        orderBy: { createdAt: "desc" },
+        take: limit - productIds.length,
+      });
+      productIds = [...productIds, ...fallback.map((p) => p.id)];
+    }
+  }
+
+  if (productIds.length === 0) return [];
+
+  const rows = await db.product.findMany({
+    where: { id: { in: productIds }, isAvailable: true },
+    include: { category: true, metal: true, images: true, variants: true },
+  });
+  const rowsById = new Map(rows.map((r) => [r.id, r]));
+  return productIds
+    .map((id) => rowsById.get(id))
+    .filter((r): r is (typeof rows)[number] => !!r)
+    .map(mapProduct);
+}
+
 export type AdminProductStatusFilter = "ALL" | "ACTIVE" | "HIDDEN" | "FEATURED" | "LOW_STOCK";
 
 export async function adminGetProductsPage(
