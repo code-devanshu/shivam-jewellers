@@ -1,5 +1,4 @@
 const PINCODE_KEY = "delivery_pincode";
-const DISMISSED_KEY = "delivery_prompt_dismissed";
 
 export type PincodeSource = "geo" | "manual";
 
@@ -47,21 +46,8 @@ export function getServerSnapshot(): StoredPincode | null {
   return null;
 }
 
-export function getDismissedSnapshot(): boolean {
-  return window.localStorage.getItem(DISMISSED_KEY) === "1";
-}
-
-export function getDismissedServerSnapshot(): boolean {
-  return false;
-}
-
 export function setDeliveryPincode(pincode: string, source: PincodeSource) {
   const value: StoredPincode = { pincode, source, updatedAt: Date.now() };
   window.localStorage.setItem(PINCODE_KEY, JSON.stringify(value));
-  notify();
-}
-
-export function dismissLocationPrompt() {
-  window.localStorage.setItem(DISMISSED_KEY, "1");
   notify();
 }

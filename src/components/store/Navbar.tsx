@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import {
   Heart,
   Menu,
-  ShoppingBag,
+  ShoppingCart,
   User,
   X,
   Gem,
@@ -20,6 +20,7 @@ import {
 import type { Category, Product } from "@/lib/types";
 import { signOutCustomer } from "@/app/(store)/auth/actions";
 import SearchBar from "@/components/store/SearchBar";
+import DeliveryLocationButton from "@/components/store/DeliveryLocationButton";
 import { useAuthModal } from "@/components/store/AuthModalProvider";
 import { useCart } from "@/components/store/CartProvider";
 
@@ -83,6 +84,15 @@ export default function Navbar({ categories, trendingProducts, cartCount, wishli
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartCount]);
 
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mobileOpen]);
+
   const navCategories = categories
     .filter((c) => c.showInNav)
     .sort((a, b) => a.order - b.order);
@@ -92,7 +102,7 @@ export default function Navbar({ categories, trendingProducts, cartCount, wishli
 
       {/* ── Row 1: Logo · Icons ───────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3 h-16">
+        <div className="flex items-center gap-3 h-10 sm:h-16">
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
@@ -106,6 +116,9 @@ export default function Navbar({ categories, trendingProducts, cartCount, wishli
               </div>
             </div>
           </Link>
+
+          {/* Delivery location — desktop only inline */}
+          <DeliveryLocationButton className="hidden sm:flex" />
 
           {/* Search — desktop only inline */}
           <div className="hidden sm:flex flex-1 justify-center px-4">
@@ -181,7 +194,7 @@ export default function Navbar({ categories, trendingProducts, cartCount, wishli
               aria-label="Cart"
               className="relative p-2.5 text-gray-500 hover:text-rose-gold transition-colors"
             >
-              <ShoppingBag size={20} strokeWidth={1.5} />
+              <ShoppingCart size={20} strokeWidth={1.5} />
               {count > 0 && (
                 <span className="absolute top-1.5 right-1.5 min-w-[14px] h-[14px] bg-rose-gold text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">
                   {count > 9 ? "9+" : count}
@@ -202,7 +215,8 @@ export default function Navbar({ categories, trendingProducts, cartCount, wishli
       </div>
 
       {/* ── Mobile search row ─────────────────────────────────────── */}
-      <div className="sm:hidden px-4 py-2.5">
+      <div className="sm:hidden px-4 pb-2.5 space-y-1">
+        <DeliveryLocationButton />
         <SearchBar
           categories={categories}
           trendingProducts={trendingProducts}
@@ -249,9 +263,21 @@ export default function Navbar({ categories, trendingProducts, cartCount, wishli
         </div>
       </div>
 
-      {/* ── Mobile panel ──────────────────────────────────────────── */}
-      {mobileOpen && (
-        <div className="sm:hidden bg-white">
+      {/* ── Mobile drawer backdrop ───────────────────────────────── */}
+      <div
+        onClick={() => setMobileOpen(false)}
+        aria-hidden="true"
+        className={`sm:hidden fixed inset-0 z-40 bg-black/40 transition-opacity duration-300 ${
+          mobileOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+      />
+
+      {/* ── Mobile drawer panel ──────────────────────────────────── */}
+      <div
+        className={`sm:hidden fixed inset-y-0 right-0 z-50 w-[82%] max-w-xs bg-white shadow-xl overflow-y-auto transition-transform duration-300 ease-in-out ${
+          mobileOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
           {/* Categories */}
           <div className="px-4 py-2">
             <Link
@@ -344,7 +370,6 @@ export default function Navbar({ categories, trendingProducts, cartCount, wishli
             )}
           </div>
         </div>
-      )}
     </header>
   );
 }

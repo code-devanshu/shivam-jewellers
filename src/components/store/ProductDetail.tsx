@@ -5,10 +5,11 @@ import { Suspense, use, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronDown,
+  ChevronLeft,
   ChevronUp,
   Heart,
   Shield,
-  ShoppingBag,
+  ShoppingCart,
   Zap,
 } from "lucide-react";
 import ProductImageGallery from "@/components/store/ProductImageGallery";
@@ -119,8 +120,8 @@ function PriceCard({
         </button>
       </div>
       <p className="text-xs text-brown/50 mt-1">
-        Inclusive of GST · Calculated at today&apos;s {product.metal.name.toLowerCase()} rate (
-        {formatPrice(ratePerGram)}/g)
+        Inclusive of GST · Calculated at today&apos;s{" "}
+        {product.metal.name.toLowerCase()} rate ({formatPrice(ratePerGram)}/g)
       </p>
 
       {showBreakdown && (
@@ -174,9 +175,9 @@ function WishlistButtonSkeleton() {
   return (
     <div
       aria-hidden
-      className="p-3.5 rounded-full border-2 border-blush text-rose-gold/30 animate-pulse"
+      className="p-2.5 rounded-full border-2 border-blush text-rose-gold/30 animate-pulse shrink-0"
     >
-      <Heart size={20} />
+      <Heart size={18} />
     </div>
   );
 }
@@ -206,7 +207,9 @@ function WishlistButton({
       try {
         const confirmed = await toggleWishlist(product.id);
         setWishlisted(confirmed);
-        toast.success(confirmed ? "Added to wishlist" : "Removed from wishlist");
+        toast.success(
+          confirmed ? "Added to wishlist" : "Removed from wishlist",
+        );
       } catch (e) {
         if (isRedirectError(e)) throw e;
         setWishlisted(!next);
@@ -217,14 +220,14 @@ function WishlistButton({
   return (
     <button
       onClick={handleToggleWishlist}
-      className={`p-3.5 rounded-full border-2 transition-all ${
+      className={`p-2.5 rounded-full border-2 transition-all shrink-0 ${
         wishlisted
           ? "bg-rose-gold border-rose-gold text-white"
           : "border-blush text-rose-gold hover:bg-blush"
       }`}
       aria-label="Toggle wishlist"
     >
-      <Heart size={20} fill={wishlisted ? "currentColor" : "none"} />
+      <Heart size={18} fill={wishlisted ? "currentColor" : "none"} />
     </button>
   );
 }
@@ -242,27 +245,32 @@ export default function ProductDetail({
   const { openAuthModal } = useAuthModal();
   const { increment, showFlyout } = useCart();
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
-    product.variants[0] ?? null
+    product.variants[0] ?? null,
   );
-  const [variantChosen, setVariantChosen] = useState(product.variants.length <= 1);
-  const [cartState, setCartState] = useState<"idle" | "adding" | "added">("idle");
+  const [variantChosen, setVariantChosen] = useState(
+    product.variants.length <= 1,
+  );
+  const [cartState, setCartState] = useState<"idle" | "adding" | "added">(
+    "idle",
+  );
   const [buyState, setBuyState] = useState<"idle" | "pending">("idle");
   const [, startCartTransition] = useTransition();
 
   const additionalPrice = selectedVariant?.additionalPrice ?? 0;
-  const primaryImage = product.images.find((i) => i.isPrimary) ?? product.images[0];
+  const primaryImage =
+    product.images.find((i) => i.isPrimary) ?? product.images[0];
   const outOfStock = !product.isAvailable;
   const needsVariantSelection = !variantChosen;
   const purchaseDisabled = outOfStock || needsVariantSelection;
 
   const sizes = [
     ...new Set(
-      product.variants.map((v) => v.size).filter((s): s is string => !!s)
+      product.variants.map((v) => v.size).filter((s): s is string => !!s),
     ),
   ];
   const gemstones = [
     ...new Set(
-      product.variants.map((v) => v.gemstone).filter((g): g is string => !!g)
+      product.variants.map((v) => v.gemstone).filter((g): g is string => !!g),
     ),
   ];
 
@@ -312,9 +320,16 @@ export default function ProductDetail({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-brown/50 mb-8 flex-wrap">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28 sm:pb-8">
+      {/* Breadcrumb — compact back link on mobile, full chain on desktop */}
+      <Link
+        href={`/products?category=${product.category.slug}`}
+        className="sm:hidden inline-flex items-center gap-0.5 text-sm font-medium text-brown/60 hover:text-rose-gold transition-colors mb-4"
+      >
+        <ChevronLeft size={16} strokeWidth={2} />
+        {product.category.name}
+      </Link>
+      <nav className="hidden sm:flex items-center gap-2 text-sm text-brown/50 mb-8 flex-wrap">
         <Link href="/" className="hover:text-rose-gold transition-colors">
           Home
         </Link>
@@ -366,15 +381,37 @@ export default function ProductDetail({
 
           {/* Name + weight */}
           <div>
-            <h1 className="text-3xl font-serif font-bold text-brown-dark leading-snug mb-3">
-              {product.name}
-            </h1>
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <h1 className="text-3xl font-serif font-bold text-brown-dark leading-snug">
+                {product.name}
+              </h1>
+              <Suspense fallback={<WishlistButtonSkeleton />}>
+                <WishlistButton
+                  product={product}
+                  customerId={customerId}
+                  wishlistPromise={wishlistPromise}
+                />
+              </Suspense>
+            </div>
             <div className="flex items-center gap-3 text-sm text-brown/60">
-              <span>Net weight: <strong className="text-brown-dark">{product.weightGrams}g</strong></span>
+              <span>
+                Net weight:{" "}
+                <strong className="text-brown-dark">
+                  {product.weightGrams}g
+                </strong>
+              </span>
               <span>·</span>
-              <span>Gross weight: <strong className="text-brown-dark">{product.grossWeightGrams}g</strong></span>
+              <span>
+                Gross weight:{" "}
+                <strong className="text-brown-dark">
+                  {product.grossWeightGrams}g
+                </strong>
+              </span>
             </div>
           </div>
+
+          {/* Delivery estimate */}
+          <DeliveryEstimate />
 
           {/* Price card — streams in once the live rate resolves */}
           <Suspense fallback={<PriceCardSkeleton />}>
@@ -419,7 +456,9 @@ export default function ProductDetail({
           {/* Gemstone selector */}
           {gemstones.length > 0 && (
             <div>
-              <p className="text-sm font-semibold text-brown-dark mb-2.5">Gemstone</p>
+              <p className="text-sm font-semibold text-brown-dark mb-2.5">
+                Gemstone
+              </p>
               <div className="flex flex-wrap gap-2">
                 {gemstones.map((gem) => {
                   const active = selectedVariant?.gemstone === gem;
@@ -428,7 +467,7 @@ export default function ProductDetail({
                       key={gem}
                       onClick={() => {
                         const v = product.variants.find(
-                          (vv) => vv.gemstone === gem
+                          (vv) => vv.gemstone === gem,
                         );
                         if (v) setSelectedVariant(v);
                         setVariantChosen(true);
@@ -460,18 +499,21 @@ export default function ProductDetail({
               </p>
             )}
 
-            {/* Buy Now — primary */}
-            <button
-              onClick={handleBuyNow}
-              disabled={buyState === "pending" || purchaseDisabled}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-semibold bg-brown-dark hover:bg-brown text-white disabled:opacity-60 transition-all"
-            >
-              <Zap size={17} />
-              {buyState === "pending" ? "Please wait…" : outOfStock ? "Out of Stock" : "Buy Now"}
-            </button>
+            {/* Buy Now + Add to Cart — inline row on desktop, sticky bottom bar on mobile */}
+            <div className="hidden sm:flex gap-3">
+              <button
+                onClick={handleBuyNow}
+                disabled={buyState === "pending" || purchaseDisabled}
+                className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-semibold bg-brown-dark hover:bg-brown text-white disabled:opacity-60 transition-all"
+              >
+                <Zap size={17} />
+                {buyState === "pending"
+                  ? "Please wait…"
+                  : outOfStock
+                    ? "Out of Stock"
+                    : "Buy Now"}
+              </button>
 
-            {/* Add to Cart + Wishlist */}
-            <div className="flex gap-3">
               <button
                 onClick={handleAddToCart}
                 disabled={cartState === "adding" || purchaseDisabled}
@@ -481,27 +523,52 @@ export default function ProductDetail({
                     : "border-rose-gold text-rose-gold hover:bg-rose-gold hover:text-white disabled:opacity-60"
                 }`}
               >
-                <ShoppingBag size={17} />
+                <ShoppingCart size={17} />
                 {outOfStock
                   ? "Out of Stock"
                   : cartState === "adding"
-                  ? "Adding…"
-                  : cartState === "added"
-                  ? "Added to Cart!"
-                  : "Add to Cart"}
+                    ? "Adding…"
+                    : cartState === "added"
+                      ? "Added to Cart!"
+                      : "Add to Cart"}
               </button>
-              <Suspense fallback={<WishlistButtonSkeleton />}>
-                <WishlistButton
-                  product={product}
-                  customerId={customerId}
-                  wishlistPromise={wishlistPromise}
-                />
-              </Suspense>
             </div>
           </div>
 
-          {/* Delivery estimate */}
-          <DeliveryEstimate />
+          {/* Mobile sticky CTA bar */}
+          <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-blush px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex gap-3">
+            <button
+              onClick={handleBuyNow}
+              disabled={buyState === "pending" || purchaseDisabled}
+              className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-semibold bg-brown-dark hover:bg-brown text-white disabled:opacity-60 transition-all"
+            >
+              <Zap size={17} />
+              {buyState === "pending"
+                ? "Please wait…"
+                : outOfStock
+                  ? "Out of Stock"
+                  : "Buy Now"}
+            </button>
+
+            <button
+              onClick={handleAddToCart}
+              disabled={cartState === "adding" || purchaseDisabled}
+              className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-semibold border-2 transition-all ${
+                cartState === "added"
+                  ? "border-green-500 bg-green-500 text-white"
+                  : "border-rose-gold text-rose-gold hover:bg-rose-gold hover:text-white disabled:opacity-60"
+              }`}
+            >
+              <ShoppingCart size={17} />
+              {outOfStock
+                ? "Out of Stock"
+                : cartState === "adding"
+                  ? "Adding…"
+                  : cartState === "added"
+                    ? "Added to Cart!"
+                    : "Add to Cart"}
+            </button>
+          </div>
 
           {/* Description */}
           {product.description && (
